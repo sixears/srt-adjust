@@ -1,7 +1,4 @@
-#!/home/martyn/.nix-profiles/dev/bin/runghc -Wall
-
-{-# OPTIONS_GHC -Wall              #-}
-
+{-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -71,6 +68,11 @@ import Data.Function.Unicode  ( (∘) )
 import Data.Monoid.Unicode    ( (⊕) )
 import Data.Ord.Unicode       ( (≤), (≥) )
 import Prelude.Unicode        ( ℚ, ℤ, (÷) )
+
+-- boundedn ----------------------------
+
+import BoundedN  ( 𝕎, pattern 𝕎 )
+import ToNum     ( toNum, toNumI )
 
 -- data-textual ------------------------
 
@@ -175,7 +177,7 @@ import ParsecPlus  ( Parsecable( parsec, parser ), parsecFileUTF8 )
 import Test.QuickCheck.Arbitrary
                               ( Arbitrary( arbitrary ), arbitraryBoundedIntegral
                               , arbitrarySizedNatural )
-import Test.QuickCheck.Gen    ( Gen, elements, listOf, listOf1, suchThat )
+import Test.QuickCheck.Gen    ( Gen, listOf, listOf1, suchThat )
 import Test.QuickCheck.Modifiers
                               ( PrintableString( getPrintableString ) )
 
@@ -279,14 +281,11 @@ checkBounds' f = checkBounds f minBound maxBound
 
 boundsTests ∷ TestTree
 boundsTests =
-  let checkN1000 ∷ Property
-      checkN1000 = forAll (elements [0..999]) $ checkBounds' toN1000
-      gen3Nats ∷ Gen (ℕ,ℕ,ℕ)
+  let gen3Nats ∷ Gen (ℕ,ℕ,ℕ)
       gen3Nats = (,,) ⊳ arbitrarySizedNatural ⊵ arbitrarySizedNatural
                                               ⊵ arbitrarySizedNatural
    in testGroup "boundsCheck"
-                [ testProperty "N1000"   checkN1000
-                , testProperty "Word8"   (boundedProp @Word8)
+                [ testProperty "Word8"   (boundedProp @Word8)
                 , testProperty "Word16"  (boundedProp @Word16)
                 , testProperty "Word64"  (boundedProp @Word64)
                 , testProperty "Int"     (boundedProp @Int)
@@ -312,47 +311,6 @@ boundedProp x y = checkBounds (boundsCheck (min x y) (max x y)) x y
 
 boundedProp' ∷ (Integral α, NFData α) ⇒ (α,α,α) → Property
 boundedProp' (x,y,a) = boundedProp x y a
-
-------------------------------------------------------------
-
-newtype N1000 = N_1000 Word16
-  deriving (Enum, Eq, Integral, NFData, Ord, Real, Show)
-
-pattern N1000 ∷ Word16 → N1000
-pattern N1000 n ← N_1000 n
-        where N1000 n = toN1000 n
-
-toN1000 ∷ (Integral α, Num α) ⇒ α → N1000
-toN1000 n@(toInteger → n') | n' < toInteger (minBound @N1000) = throw Underflow
-                           | n' > toInteger (maxBound @N1000) = throw Overflow
-                           | otherwise                 = N_1000 (fromIntegral n)
-
--- We implement our own Num, rather than deriving it, so that we can implement
--- `fromInteger`; per https://www.haskell.org/tutorial/numbers.html,
--- `fromInteger` is used to implement numeric literals; so we use it, and
--- (+),(-),(*) to ensure overflow/underflow are caught.
-
--- DON'T EXPOSE THE CONSTRUCTOR as that bypasses the bounds check
-
-instance Num N1000 where
-  (N_1000 a) + (N_1000 b) = fromInteger (toInteger (a + b))
-  (N_1000 a) - (N_1000 b) = fromInteger (toInteger (a - b))
-  (N_1000 a) * (N_1000 b) = fromInteger (toInteger (a * b))
-
-  negate (N_1000 0) = 0
-  negate _         = throw Underflow
-
-  fromInteger ∷ ℤ → N1000
-  fromInteger = toN1000
-
-  abs = id
-
-  signum (N_1000 0) = 0
-  signum _ = 1
-
-instance Bounded N1000 where
-  minBound = N_1000 0
-  maxBound = N_1000 999
 
 ------------------------------------------------------------
 
@@ -962,13 +920,13 @@ dhms_nsTests =
      value.
 -}
 
-hms_ms ∷ Duration → (NumSign,N2562047,N60,N60,N1000)
+hms_ms ∷ Duration → (NumSign,N2562047,N60,N60,𝕎 1000)
 hms_ms d = let HMS_NS g hh mm ss ns = d
-            in (g,hh,mm,ss,(round $ toInteger ns % 1_000_000))
+            in (g,hh,mm,ss,𝕎 (round $ toInteger ns % 1_000_000))
 
-pattern HMS_MS ∷ NumSign → N2562047 → N60 → N60 → N1000 → Duration
+pattern HMS_MS ∷ NumSign → N2562047 → N60 → N60 → 𝕎 1000 → Duration
 pattern HMS_MS g hh mm ss ms ← (hms_ms → (g,hh,mm,ss,ms))
-        where HMS_MS g hh mm ss ms = HMS_NS g hh mm ss (fromIntegral ms * 1_000_000)
+        where HMS_MS g hh mm ss ms = HMS_NS g hh mm ss (toNum ms * 1_000_000)
 
 hms_msTests ∷ TestTree
 hms_msTests =
@@ -976,13 +934,13 @@ hms_msTests =
       dur' = Duration (-4_834_568_000_000)
       HMS_MS g hh mm ss ms = dur
    in testGroup "HMS_MS"
-                [ testCase "hms_ms"   $  (PLUS,1,20,34,568) ≟ hms_ms dur
-                , testCase "→ HMS_MS" $  dur' ≟ HMS_MS MINUS 1 20 34 568
+                [ testCase "hms_ms"   $  (PLUS,1,20,34,𝕎 568) ≟ hms_ms dur
+                , testCase "→ HMS_MS" $  dur' ≟ HMS_MS MINUS 1 20 34 (𝕎 568)
                 , testCase "g"        $ PLUS  ≟ g
                 , testCase "hh"       $     1 ≟ hh
                 , testCase "mm"       $    20 ≟ mm
                 , testCase "ss"       $    34 ≟ ss
-                , testCase "ms"       $   568 ≟ ms
+                , testCase "ms"       $ 𝕎 568 ≟ ms
                 ]
 
 ----------------------------------------
@@ -1236,7 +1194,7 @@ instance Fractional SRTTimeStamp where
 instance Printable SRTTimeStamp where
   print (SRTTimeStamp d) =
     let HMS_MS g h m s ms = d
-     in P.text $ [fmt|%s%02d:%02d:%02d,%03d|] (if g ≡ MINUS then "-" else "") h m s ms
+     in P.text $ [fmt|%s%02d:%02d:%02d,%03d|] (if g ≡ MINUS then "-" else "") h m s (toNumI ms)
 
 instance Textual SRTTimeStamp where
   textual = SRTTimeStamp ⊳ textual
