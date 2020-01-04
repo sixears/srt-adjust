@@ -40,7 +40,7 @@ import Control.Exception    ( ArithException( Overflow, Underflow ), Exception
                             , SomeException, catch, evaluate, throw )
 import Control.Monad        ( Monad, forM_, return, when )
 import Control.Monad.IO.Class  ( MonadIO, liftIO )
-import Data.Bifunctor       ( bimap )
+import Data.Bifunctor       ( bimap, second )
 import Data.Bool            ( Bool, not, otherwise )
 import Data.Char            ( Char )
 import Data.Either          ( Either( Left, Right ) )
@@ -72,6 +72,7 @@ import Prelude.Unicode        ( ℚ, ℤ, (÷) )
 -- boundedn ----------------------------
 
 import BoundedN  ( 𝕎, pattern 𝕎 )
+import FromI     ( __fromI' )
 import ToNum     ( toNum, toNumI )
 
 -- data-textual ------------------------
@@ -397,7 +398,9 @@ instance Bounded N24 where
 
 ------------------------------------------------------------
 
+type NE9 = 𝕎 1_000_000_000
 {- | Bounded to 1Billion ([0-999,999,999]). -}
+{-
 newtype NE9 = N_E9 Word32
   deriving (Enum, Eq, Integral, NFData, Ord, Real, Show)
 
@@ -438,6 +441,8 @@ instance Bounded NE9 where
   maxBound = N_E9 999_999_999
 
                                    -- ≃ 5,124,095h
+-}
+
 ------------------------------------------------------------
 
 {- | Bounded to max. number of hours in a `Duration` (5,124,095). -}
@@ -539,9 +544,9 @@ newtype Duration = Duration Int64 -- in nanoseconds, ≡ 106,751 days ≃ 292y
 instance Printable Duration where
   print d =
     let HMS_NS g h m s ns = d
-     in let suffix = if ns ≡ 0
+     in let suffix = if ns ≡ 𝕎 0
                      then ""
-                     else pack $ '.' : dropWhileEnd (≡ '0')([fmt|%09d|] ns)
+                     else pack $ '.' : dropWhileEnd (≡ '0')([fmt|%09d|] $ toNumI ns)
             sgn = if g ≡ MINUS then "-" else ""
          in if h > 0
             then P.text $ [fmt|%s%dh%02dm%02d%ts|] sgn h m s suffix
@@ -817,12 +822,12 @@ msTests =
 {- | (De)Construct a Duration from Hours, Minutes, Seconds & Nanoseconds. -}
 
 hms_ns ∷ Duration → (NumSign,N2562047,N60,N60,NE9)
-hms_ns (Duration n) = let fromI ∷ (Integral ι, Integral κ, Num α, Num β) ⇒
+hms_ns (Duration n) = let fromi ∷ (Integral ι, Integral κ, Num α, Num β) ⇒
                                   (ι,κ) → (α,β)
-                          fromI (x,y) = (fromIntegral x, fromIntegral y)
-                          (s∷Word64,ns)  = fromI $ abs n `divMod` 1_000_000_000
-                          (m∷Word32,ss)  = fromI $ s `divMod` 60
-                          (hh,mm)        = fromI $ m `divMod` 60
+                          fromi (x,y) = (fromIntegral x, fromIntegral y)
+                          (s∷Word64,ns)  = second __fromI' $ fromi $ abs n `divMod` 1_000_000_000
+                          (m∷Word32,ss)  = fromi $ s `divMod` 60
+                          (hh,mm)        = fromi $ m `divMod` 60
                        in (toNumSign n,hh,mm,ss,ns)
 
 hms_ns' ∷ NumSign → N2562047 → N60 → N60 → NE9 → Duration
@@ -836,7 +841,7 @@ hms_ns' sgn hh mm ss ns = let hh' ∷ ℕ
                               ss' = fromIntegral ss
                               billℕ ∷ ℕ
                               billℕ = 1_000_000_000
-                              ns' = fromIntegral ns
+                              ns' = toNum ns
                               n ∷ ℕ
                               n = fromIntegral $
                                     ns' + billℕ * (ss'+ 60*(mm'+60*hh'))
@@ -854,12 +859,12 @@ hms_nsTests =
   let dur = Duration (-3_723_000_000_004)
       HMS_NS g hh mm ss ns = dur
    in testGroup "HMS_NS"
-                [ testCase "→ HMS_NS" $ dur ≟ HMS_NS MINUS 1 2 3 4
+                [ testCase "→ HMS_NS" $ dur ≟ HMS_NS MINUS 1 2 3 (𝕎 4)
                 , testCase "g"  $ MINUS ≟ g
-                , testCase "hh" $ 1     ≟ hh
-                , testCase "mm" $ 2     ≟ mm
-                , testCase "ss" $ 3     ≟ ss
-                , testCase "ns" $ 4     ≟ ns
+                , testCase "hh" $   1   ≟ hh
+                , testCase "mm" $   2   ≟ mm
+                , testCase "ss" $   3   ≟ ss
+                , testCase "ns" $ 𝕎 4   ≟ ns
                 ]
 
 --------------------
@@ -871,7 +876,7 @@ dhms_ns ∷ Duration → (N106751,N24,N60,N60,NE9)
 dhms_ns (Duration n) = let fromI ∷ (Integral ι, Integral κ, Num α, Num β) ⇒
                                    (ι,κ) → (α,β)
                            fromI (x,y) = (fromIntegral x, fromIntegral y)
-                           (s∷Word64,ns)  = fromI $ n `divMod` 1_000_000_000
+                           (s∷Word64,ns)  = second __fromI' $ fromI $ n `divMod` 1_000_000_000
                            (m∷Word32,ss)  = fromI $ s `divMod` 60
                            (h∷Word32,mm)  = fromI $ m `divMod` 60
                            (dd,hh)        = fromI $ h `divMod` 24
@@ -892,7 +897,7 @@ pattern DHMS_NS dd hh mm ss ns ← (dhms_ns → (dd,hh,mm,ss,ns))
                     ss' = fromIntegral ss
                     billℕ ∷ ℕ
                     billℕ = 1_000_000_000
-                    ns' = fromIntegral ns
+                    ns' = toNum ns
                     n ∷ ℕ
                     n = fromIntegral $
                           ns' + billℕ * (ss'+ 60*(mm'+60*(hh'+24*dd')))
@@ -905,12 +910,12 @@ dhms_nsTests =
   let dur = Duration 93_784_000_000_005
       DHMS_NS dd hh mm ss ns = dur
    in testGroup "DHMS_NS"
-                [ testCase "→ DHMS_NS" $ dur ≟ DHMS_NS 1 2 3 4 5
-                , testCase "dd" $  1 ≟ dd
-                , testCase "hh" $  2 ≟ hh
-                , testCase "mm" $  3 ≟ mm
-                , testCase "ss" $  4 ≟ ss
-                , testCase "ns" $  5 ≟ ns
+                [ testCase "→ DHMS_NS" $ dur ≟ DHMS_NS 1 2 3 4 (𝕎 5)
+                , testCase "dd" $   1 ≟ dd
+                , testCase "hh" $   2 ≟ hh
+                , testCase "mm" $   3 ≟ mm
+                , testCase "ss" $   4 ≟ ss
+                , testCase "ns" $ 𝕎 5 ≟ ns
                 ]
 
 --------------------
@@ -922,11 +927,11 @@ dhms_nsTests =
 
 hms_ms ∷ Duration → (NumSign,N2562047,N60,N60,𝕎 1000)
 hms_ms d = let HMS_NS g hh mm ss ns = d
-            in (g,hh,mm,ss,𝕎 (round $ toInteger ns % 1_000_000))
+            in (g,hh,mm,ss,𝕎 (round $ toNumI ns % 1_000_000))
 
 pattern HMS_MS ∷ NumSign → N2562047 → N60 → N60 → 𝕎 1000 → Duration
 pattern HMS_MS g hh mm ss ms ← (hms_ms → (g,hh,mm,ss,ms))
-        where HMS_MS g hh mm ss ms = HMS_NS g hh mm ss (toNum ms * 1_000_000)
+        where HMS_MS g hh mm ss ms = HMS_NS g hh mm ss (__fromI' $ toNum ms * 1_000_000)
 
 hms_msTests ∷ TestTree
 hms_msTests =
