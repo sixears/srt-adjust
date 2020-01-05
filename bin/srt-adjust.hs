@@ -357,44 +357,7 @@ instance Bounded N60 where
 
 ------------------------------------------------------------
 
-newtype N24 = N_24 Word16
-  deriving (Enum, Eq, Integral, NFData, Ord, Real, Show)
-
-pattern N24 ∷ Word16 → N24
-pattern N24 n ← N_24 n
-        where N24 n = toN24 n
-
-toN24 ∷ (Integral α, Num α) ⇒ α → N24
-toN24 n@(toInteger → n') | n' < toInteger (minBound @N24) = throw Underflow
-                         | n' > toInteger (maxBound @N24) = throw Overflow
-                         | otherwise                     = N_24 (fromIntegral n)
-
--- We implement our own Num, rather than deriving it, so that we can implement
--- `fromInteger`; per https://www.haskell.org/tutorial/numbers.html,
--- `fromInteger` is used to implement numeric literals; so we use it, and
--- (+),(-),(*) to ensure overflow/underflow are caught.
-
--- DON'T EXPOSE THE CONSTRUCTOR as that bypasses the bounds check
-
-instance Num N24 where
-  (N_24 a) + (N_24 b) = fromInteger (toInteger (a + b))
-  (N_24 a) - (N_24 b) = fromInteger (toInteger (a - b))
-  (N_24 a) * (N_24 b) = fromInteger (toInteger (a * b))
-
-  negate (N_24 0) = 0
-  negate _         = throw Underflow
-
-  fromInteger ∷ ℤ → N24
-  fromInteger = toN24
-
-  abs = id
-
-  signum (N_24 0) = 0
-  signum _ = 1
-
-instance Bounded N24 where
-  minBound = N_24 0
-  maxBound = N_24 23
+type N24 = 𝕎 24
 
 ------------------------------------------------------------
 
@@ -756,14 +719,14 @@ dhms_ns (Duration n) = let fromi ∷ (Integral ι, Integral κ, Num α, Num β) 
                            (s∷Word64,ns)  = second __fromI' $ fromi $ n `divMod` 1_000_000_000
                            (m∷Word32,ss)  = fromi $ s `divMod` 60
                            (h∷Word32,mm)  = fromi $ m `divMod` 60
-                           (dd,hh)        = first __fromI' $ fromi $ h `divMod` 24
+                           (dd,hh)        = bimap __fromI' __fromI' $ fromi $ h `divMod` 24
                         in (dd,hh,mm,ss,ns)
 
 pattern DHMS_NS ∷ N106751 → N24 → N60 → N60 → NE9 → Duration
 pattern DHMS_NS dd hh mm ss ns ← (dhms_ns → (dd,hh,mm,ss,ns))
         where DHMS_NS dd hh mm ss ns =
                 let hh' ∷ ℕ
-                    hh' = fromIntegral hh
+                    hh' = toNum hh
                     mm' ∷ ℕ
                     mm' = fromIntegral mm
                     ss' ∷ ℕ
@@ -783,9 +746,9 @@ dhms_nsTests =
   let dur = Duration 93_784_000_000_005
       DHMS_NS dd hh mm ss ns = dur
    in testGroup "DHMS_NS"
-                [ testCase "→ DHMS_NS" $ dur ≟ DHMS_NS (𝕎 1) 2 3 4 (𝕎 5)
+                [ testCase "→ DHMS_NS" $ dur ≟ DHMS_NS (𝕎 1) (𝕎 2) 3 4 (𝕎 5)
                 , testCase "dd" $ 𝕎 1 ≟ dd
-                , testCase "hh" $   2 ≟ hh
+                , testCase "hh" $ 𝕎 2 ≟ hh
                 , testCase "mm" $   3 ≟ mm
                 , testCase "ss" $   4 ≟ ss
                 , testCase "ns" $ 𝕎 5 ≟ ns
