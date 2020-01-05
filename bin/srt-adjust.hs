@@ -40,7 +40,7 @@ import Control.Exception    ( ArithException( Overflow, Underflow ), Exception
                             , SomeException, catch, evaluate, throw )
 import Control.Monad        ( Monad, forM_, return, when )
 import Control.Monad.IO.Class  ( MonadIO, liftIO )
-import Data.Bifunctor       ( bimap, second )
+import Data.Bifunctor       ( bimap, first, second )
 import Data.Bool            ( Bool, not, otherwise )
 import Data.Char            ( Char )
 import Data.Either          ( Either( Left, Right ) )
@@ -399,92 +399,11 @@ instance Bounded N24 where
 ------------------------------------------------------------
 
 type NE9 = 𝕎 1_000_000_000
-{- | Bounded to 1Billion ([0-999,999,999]). -}
-{-
-newtype NE9 = N_E9 Word32
-  deriving (Enum, Eq, Integral, NFData, Ord, Real, Show)
-
-pattern NE9 ∷ Word32 → NE9
-pattern NE9 n ← N_E9 n
-        where NE9 n = toNE9 n
-
-toNE9 ∷ (Integral α, Num α) ⇒ α → NE9
-toNE9 n@(toInteger → n') | n' < toInteger (minBound @NE9) = throw Underflow
-                         | n' > toInteger (maxBound @NE9) = throw Overflow
-                         | otherwise                     = N_E9 (fromIntegral n)
-
--- We implement our own Num, rather than deriving it, so that we can implement
--- `fromInteger`; per https://www.haskell.org/tutorial/numbers.html,
--- `fromInteger` is used to implement numeric literals; so we use it, and
--- (+),(-),(*) to ensure overflow/underflow are caught.
-
--- DON'T EXPOSE THE CONSTRUCTOR as that bypasses the bounds check
-
-instance Num NE9 where
-  (N_E9 a) + (N_E9 b) = fromInteger (toInteger (a + b))
-  (N_E9 a) - (N_E9 b) = fromInteger (toInteger (a - b))
-  (N_E9 a) * (N_E9 b) = fromInteger (toInteger (a * b))
-
-  negate (N_E9 0) = 0
-  negate _         = throw Underflow
-
-  fromInteger ∷ ℤ → NE9
-  fromInteger = toNE9
-
-  abs = id
-
-  signum (N_E9 0) = 0
-  signum _ = 1
-
-instance Bounded NE9 where
-  minBound = N_E9 0
-  maxBound = N_E9 999_999_999
-
-                                   -- ≃ 5,124,095h
--}
 
 ------------------------------------------------------------
 
-{- | Bounded to max. number of hours in a `Duration` (5,124,095). -}
-newtype N2562047 = N_2562047 Word32
-  deriving (Enum, Eq, Integral, NFData, Ord, Real, Show)
-
-pattern N2562047 ∷ Word32 → N2562047
-pattern N2562047 n ← N_2562047 n
-        where N2562047 n = toN2562047 n
-
-toN2562047 ∷ (Integral α, Num α) ⇒ α → N2562047
-toN2562047 n@(toInteger → n')
-                         | n' < toInteger (minBound @N2562047) = throw Underflow
-                         | n' > toInteger (maxBound @N2562047) = throw Overflow
-                         | otherwise                = N_2562047 (fromIntegral n)
-
--- We implement our own Num, rather than deriving it, so that we can implement
--- `fromInteger`; per https://www.haskell.org/tutorial/numbers.html,
--- `fromInteger` is used to implement numeric literals; so we use it, and
--- (+),(-),(*) to ensure overflow/underflow are caught.
-
--- DON'T EXPOSE THE CONSTRUCTOR as that bypasses the bounds check
-
-instance Num N2562047 where
-  (N_2562047 a) + (N_2562047 b) = fromInteger (toInteger (a + b))
-  (N_2562047 a) - (N_2562047 b) = fromInteger (toInteger (a - b))
-  (N_2562047 a) * (N_2562047 b) = fromInteger (toInteger (a * b))
-
-  negate (N_2562047 0) = 0
-  negate _         = throw Underflow
-
-  fromInteger ∷ ℤ → N2562047
-  fromInteger = toN2562047
-
-  abs = id
-
-  signum (N_2562047 0) = 0
-  signum _ = 1
-
-instance Bounded N2562047 where
-  minBound = N_2562047 0
-  maxBound = N_2562047 5_124_095
+{- | Bounded to max. number of hours in a `Duration` (2,562,047). -}
+type N2562047 = 𝕎 2562047
 
 ------------------------------------------------------------
 
@@ -548,8 +467,8 @@ instance Printable Duration where
                      then ""
                      else pack $ '.' : dropWhileEnd (≡ '0')([fmt|%09d|] $ toNumI ns)
             sgn = if g ≡ MINUS then "-" else ""
-         in if h > 0
-            then P.text $ [fmt|%s%dh%02dm%02d%ts|] sgn h m s suffix
+         in if toNumI h > 0
+            then P.text $ [fmt|%s%dh%02dm%02d%ts|] sgn (toNumI h) m s suffix
             else if m > 0
                  then P.text $ [fmt|%s%dm%02d%ts|] sgn m s suffix
                  else P.text $ [fmt|%s%d%ts|] sgn s suffix
@@ -827,15 +746,11 @@ hms_ns (Duration n) = let fromi ∷ (Integral ι, Integral κ, Num α, Num β) �
                           fromi (x,y) = (fromIntegral x, fromIntegral y)
                           (s∷Word64,ns)  = second __fromI' $ fromi $ abs n `divMod` 1_000_000_000
                           (m∷Word32,ss)  = fromi $ s `divMod` 60
-                          (hh,mm)        = fromi $ m `divMod` 60
+                          (hh,mm)        = first __fromI' $ fromi $ m `divMod` 60
                        in (toNumSign n,hh,mm,ss,ns)
 
 hms_ns' ∷ NumSign → N2562047 → N60 → N60 → NE9 → Duration
-hms_ns' sgn hh mm ss ns = let hh' ∷ ℕ
-                              hh' = if hh >= 5_124_095
-                                    then throw Overflow
-                                    else fromIntegral hh
-                              mm' ∷ ℕ
+hms_ns' sgn hh mm ss ns = let mm' ∷ ℕ
                               mm' = fromIntegral mm
                               ss' ∷ ℕ
                               ss' = fromIntegral ss
@@ -844,7 +759,7 @@ hms_ns' sgn hh mm ss ns = let hh' ∷ ℕ
                               ns' = toNum ns
                               n ∷ ℕ
                               n = fromIntegral $
-                                    ns' + billℕ * (ss'+ 60*(mm'+60*hh'))
+                                    ns' + billℕ * (ss'+ 60*(mm'+60*(toNum hh)))
                            in if n > fromIntegral (maxBound @Word64)
                               then throw Overflow
                               else Duration $ fromNumSign sgn * fromIntegral n
@@ -859,9 +774,9 @@ hms_nsTests =
   let dur = Duration (-3_723_000_000_004)
       HMS_NS g hh mm ss ns = dur
    in testGroup "HMS_NS"
-                [ testCase "→ HMS_NS" $ dur ≟ HMS_NS MINUS 1 2 3 (𝕎 4)
+                [ testCase "→ HMS_NS" $ dur ≟ HMS_NS MINUS (𝕎 1) 2 3 (𝕎 4)
                 , testCase "g"  $ MINUS ≟ g
-                , testCase "hh" $   1   ≟ hh
+                , testCase "hh" $ 𝕎 1   ≟ hh
                 , testCase "mm" $   2   ≟ mm
                 , testCase "ss" $   3   ≟ ss
                 , testCase "ns" $ 𝕎 4   ≟ ns
@@ -873,13 +788,13 @@ hms_nsTests =
      Nanoseconds. -}
 
 dhms_ns ∷ Duration → (N106751,N24,N60,N60,NE9)
-dhms_ns (Duration n) = let fromI ∷ (Integral ι, Integral κ, Num α, Num β) ⇒
+dhms_ns (Duration n) = let fromi ∷ (Integral ι, Integral κ, Num α, Num β) ⇒
                                    (ι,κ) → (α,β)
-                           fromI (x,y) = (fromIntegral x, fromIntegral y)
-                           (s∷Word64,ns)  = second __fromI' $ fromI $ n `divMod` 1_000_000_000
-                           (m∷Word32,ss)  = fromI $ s `divMod` 60
-                           (h∷Word32,mm)  = fromI $ m `divMod` 60
-                           (dd,hh)        = fromI $ h `divMod` 24
+                           fromi (x,y) = (fromIntegral x, fromIntegral y)
+                           (s∷Word64,ns)  = second __fromI' $ fromi $ n `divMod` 1_000_000_000
+                           (m∷Word32,ss)  = fromi $ s `divMod` 60
+                           (h∷Word32,mm)  = fromi $ m `divMod` 60
+                           (dd,hh)        = fromi $ h `divMod` 24
                         in (dd,hh,mm,ss,ns)
 
 pattern DHMS_NS ∷ N106751 → N24 → N60 → N60 → NE9 → Duration
@@ -939,10 +854,10 @@ hms_msTests =
       dur' = Duration (-4_834_568_000_000)
       HMS_MS g hh mm ss ms = dur
    in testGroup "HMS_MS"
-                [ testCase "hms_ms"   $  (PLUS,1,20,34,𝕎 568) ≟ hms_ms dur
-                , testCase "→ HMS_MS" $  dur' ≟ HMS_MS MINUS 1 20 34 (𝕎 568)
+                [ testCase "hms_ms"   $  (PLUS,𝕎 1,20,34,𝕎 568) ≟ hms_ms dur
+                , testCase "→ HMS_MS" $  dur' ≟ HMS_MS MINUS (𝕎 1) 20 34 (𝕎 568)
                 , testCase "g"        $ PLUS  ≟ g
-                , testCase "hh"       $     1 ≟ hh
+                , testCase "hh"       $   𝕎 1 ≟ hh
                 , testCase "mm"       $    20 ≟ mm
                 , testCase "ss"       $    34 ≟ ss
                 , testCase "ms"       $ 𝕎 568 ≟ ms
@@ -1046,8 +961,8 @@ hoursTests =
       dur  = Duration  3_723_123_456_789
       dur' = Duration 10_923_123_456_789
    in testGroup "hours"
-                [ testCase "1hour"     $ 1 ≟ dur ⊣ hours
-                , testCase "hours → 3" $ dur' ≟ dur ⅋ hours ⊢ 3
+                [ testCase "1hour"     $ 𝕎 1 ≟ dur ⊣ hours
+                , testCase "hours → 3" $ dur' ≟ dur ⅋ hours ⊢ 𝕎 3
                 , testCase "3½hours" $
                       (3_499_999_999%3_600_000_000_000)
                     ≟ Duration 3_499_999_999 ⊣ asHours
@@ -1199,7 +1114,7 @@ instance Fractional SRTTimeStamp where
 instance Printable SRTTimeStamp where
   print (SRTTimeStamp d) =
     let HMS_MS g h m s ms = d
-     in P.text $ [fmt|%s%02d:%02d:%02d,%03d|] (if g ≡ MINUS then "-" else "") h m s (toNumI ms)
+     in P.text $ [fmt|%s%02d:%02d:%02d,%03d|] (if g ≡ MINUS then "-" else "") (toNumI h) m s (toNumI ms)
 
 instance Textual SRTTimeStamp where
   textual = SRTTimeStamp ⊳ textual
