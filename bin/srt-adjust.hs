@@ -407,46 +407,8 @@ type N2562047 = 𝕎 2562047
 
 ------------------------------------------------------------
 
-{- | Bounded to max. number of days in a `Duration` (213,503). -}
-newtype N106751 = N_106751 Word32
-  deriving (Enum, Eq, Integral, NFData, Ord, Real, Show)
-
-pattern N106751 ∷ Word32 → N106751
-pattern N106751 n ← N_106751 n
-        where N106751 n = toN106751 n
-
-toN106751 ∷ (Integral α, Num α) ⇒ α → N106751
-toN106751 n@(toInteger → n')
-                         | n' < toInteger (minBound @N106751) = throw Underflow
-                         | n' > toInteger (maxBound @N106751) = throw Overflow
-                         | otherwise                = N_106751 (fromIntegral n)
-
--- We implement our own Num, rather than deriving it, so that we can implement
--- `fromInteger`; per https://www.haskell.org/tutorial/numbers.html,
--- `fromInteger` is used to implement numeric literals; so we use it, and
--- (+),(-),(*) to ensure overflow/underflow are caught.
-
--- DON'T EXPOSE THE CONSTRUCTOR as that bypasses the bounds check
-
-instance Num N106751 where
-  (N_106751 a) + (N_106751 b) = fromInteger (toInteger (a + b))
-  (N_106751 a) - (N_106751 b) = fromInteger (toInteger (a - b))
-  (N_106751 a) * (N_106751 b) = fromInteger (toInteger (a * b))
-
-  negate (N_106751 0) = 0
-  negate _         = throw Underflow
-
-  fromInteger ∷ ℤ → N106751
-  fromInteger = toN106751
-
-  abs = id
-
-  signum (N_106751 0) = 0
-  signum _ = 1
-
-instance Bounded N106751 where
-  minBound = N_106751 0
-  maxBound = N_106751 5_124_095
+{- | Bounded to max. number of days in a `Duration` (106,751). -}
+type N106751 = 𝕎 106751
 
 ------------------------------------------------------------
 
@@ -794,17 +756,13 @@ dhms_ns (Duration n) = let fromi ∷ (Integral ι, Integral κ, Num α, Num β) 
                            (s∷Word64,ns)  = second __fromI' $ fromi $ n `divMod` 1_000_000_000
                            (m∷Word32,ss)  = fromi $ s `divMod` 60
                            (h∷Word32,mm)  = fromi $ m `divMod` 60
-                           (dd,hh)        = fromi $ h `divMod` 24
+                           (dd,hh)        = first __fromI' $ fromi $ h `divMod` 24
                         in (dd,hh,mm,ss,ns)
 
 pattern DHMS_NS ∷ N106751 → N24 → N60 → N60 → NE9 → Duration
 pattern DHMS_NS dd hh mm ss ns ← (dhms_ns → (dd,hh,mm,ss,ns))
         where DHMS_NS dd hh mm ss ns =
-                let dd' ∷ ℕ
-                    dd' = if dd >= 213_503
-                          then throw Overflow
-                          else fromIntegral dd
-                    hh' ∷ ℕ
+                let hh' ∷ ℕ
                     hh' = fromIntegral hh
                     mm' ∷ ℕ
                     mm' = fromIntegral mm
@@ -815,7 +773,7 @@ pattern DHMS_NS dd hh mm ss ns ← (dhms_ns → (dd,hh,mm,ss,ns))
                     ns' = toNum ns
                     n ∷ ℕ
                     n = fromIntegral $
-                          ns' + billℕ * (ss'+ 60*(mm'+60*(hh'+24*dd')))
+                          ns' + billℕ * (ss'+ 60*(mm'+60*(hh'+24*toNum dd)))
                  in if n > fromIntegral (maxBound @Word64)
                     then throw Overflow
                     else Duration $ fromIntegral n
@@ -825,8 +783,8 @@ dhms_nsTests =
   let dur = Duration 93_784_000_000_005
       DHMS_NS dd hh mm ss ns = dur
    in testGroup "DHMS_NS"
-                [ testCase "→ DHMS_NS" $ dur ≟ DHMS_NS 1 2 3 4 (𝕎 5)
-                , testCase "dd" $   1 ≟ dd
+                [ testCase "→ DHMS_NS" $ dur ≟ DHMS_NS (𝕎 1) 2 3 4 (𝕎 5)
+                , testCase "dd" $ 𝕎 1 ≟ dd
                 , testCase "hh" $   2 ≟ hh
                 , testCase "mm" $   3 ≟ mm
                 , testCase "ss" $   4 ≟ ss
@@ -998,8 +956,8 @@ daysTests =
       dur  = Duration 89_532_723_123_456_789
       dur' = Duration 281_523_123_456_789
    in testGroup "days"
-                [ testCase "1,036days" $ 1_036 ≟ dur ⊣ days
-                , testCase "days → 3" $ dur' ≟ dur ⅋ days ⊢ 3
+                [ testCase "1,036days" $ 𝕎 1_036 ≟ dur ⊣ days
+                , testCase "days → 3" $ dur' ≟ dur ⅋ days ⊢ 𝕎 3
                 , testCase "3½days" $
                       (7%2) ≟ Duration 302_400_000_000_000 ⊣ asDays
                 , testCase "⅔us" $
