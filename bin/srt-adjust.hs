@@ -1,4 +1,4 @@
--- {-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -6,12 +6,12 @@
 {-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE NoImplicitPrelude          #-}
--- {-# LANGUAGE NumericUnderscores         #-}
+{-# LANGUAGE NumericUnderscores         #-}
 {-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE PatternSynonyms            #-}
 
 -- do we need this?  can we get rid of the foralls?
-{-# LANGUAGE RankNTypes #-}
+-- {-# LANGUAGE RankNTypes #-}
 -- {-# LANGUAGE QuasiQuotes                #-}
 -- {-# LANGUAGE ScopedTypeVariables        #-}
 -- {-# LANGUAGE TypeApplications           #-}
@@ -42,7 +42,6 @@ import Control.Applicative  ( many, some )
 import Control.Exception    ( ArithException( Overflow, Underflow ), Exception
                             , throw )
 import Control.Monad        ( Monad, forM_, return, when )
-import Control.Monad.IO.Class  ( MonadIO, liftIO )
 import Data.Bifunctor       ( bimap, second )
 import Data.Bool            ( Bool, not, otherwise )
 import Data.Char            ( Char )
@@ -103,7 +102,6 @@ import Data.Finite  ( Finite, getFinite )
 
 -- fluffy ------------------------------
 
-import Fluffy.MonadIO  ( warn )
 import Fluffy.Options  ( parseOpts )
 
 -- fpath -------------------------------
@@ -124,6 +122,10 @@ import Control.Lens.Prism   ( Prism', prism' )
 
 import MonadError           ( ѥ )
 import MonadError.IO.Error  ( AsIOError( _IOError ), IOError, userE )
+
+-- monadio-plus ------------------------
+
+import MonadIO  ( MonadIO, liftIO, say, warn )
 
 -- mono-traversable --------------------
 
@@ -743,30 +745,25 @@ parseFile ms = argT (action "file" ⊕ metavar "FILE" ⊕ ms)
 -- factor out run, etc. (to ProcLib?)
 -- make ProcLib Errors to be Exceptions
 
-say ∷ (MonadIO μ, Printable τ) ⇒ τ → μ ()
-say = liftIO ∘ TextIO.putStrLn ∘ toText
-
 pf ∷ File → IO (Either IOParseError SRTSequence)
 pf f = ѥ (parsecFileUTF8 f)
 
-pf' ∷ ∀ μ η . (MonadIO μ, MonadError IOParseError η) ⇒ File → μ (η SRTSequence)
+pf' ∷ (MonadIO μ, MonadError IOParseError η) ⇒ File → μ (η SRTSequence)
 pf' f = ѥ (parsecFileUTF8 f)
 
-pf'' ∷ ∀ α μ ε η . (MonadIO μ, AsParseError ε, AsIOError ε, MonadError ε η,
-                  Parsecable α) ⇒
-     File → μ (η α)
+pf'' ∷ (MonadIO μ, AsParseError ε, AsIOError ε, MonadError ε η, Parsecable α) ⇒
+       File → μ (η α)
 pf'' f = ѥ (parsecFileUTF8 f)
 
-pf''' ∷ ∀ α μ ε . (MonadIO μ, AsParseError ε, AsIOError ε, MonadError ε μ,
-                  Parsecable α) ⇒
-     File → μ α
+pf''' ∷ (MonadIO μ, AsParseError ε, AsIOError ε, MonadError ε μ, Parsecable α) ⇒
+        File → μ α
 pf''' f = parsecFileUTF8 f
 
-pf_ ∷ ∀ μ ε . (MonadIO μ, AsParseError ε, AsIOError ε, MonadError ε μ) ⇒
-        File → μ SRTSequence
+pf_ ∷ (MonadIO μ, AsParseError ε, AsIOError ε, MonadError ε μ) ⇒
+      File → μ SRTSequence
 pf_ f = parsecFileUTF8 f
 
-pf__ ∷ ∀ μ ε . (MonadIO μ, AsParseError ε, AsIOError ε, MonadError ε μ) ⇒
+pf__ ∷ (MonadIO μ, AsParseError ε, AsIOError ε, MonadError ε μ) ⇒
         Maybe File → μ SRTSequence
 pf__ mf = case mf of
            Just f  → parsecFileUTF8 f
@@ -1075,9 +1072,7 @@ srtSequenceRefShifted =
 ----------------------------------------
 
 tests ∷ TestTree
-tests = testGroup "srt-adjust" [ -- boundsTests,
---                                 durationTests ,
-                                 srtTimeStampTests, srtTimingTests
+tests = testGroup "srt-adjust" [ srtTimeStampTests, srtTimingTests
                                , srtSubtitleTextTests, srtSubtitleTests
                                , srtSequenceTests, optionsAdjustTests
                                ]
