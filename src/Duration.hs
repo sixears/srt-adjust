@@ -57,7 +57,7 @@ import Prelude.Unicode        ( ℚ, ℤ )
 
 -- boundedn ----------------------------
 
-import BoundedN  ( 𝕎, pattern 𝕎, (⨹), (⨴), (⫽), divModulo )
+import BoundedN  ( 𝕎, pattern 𝕎, (⨹), (⨴), (⨵), (⫽), divModulo )
 
 -- data-textual ------------------------
 
@@ -94,7 +94,7 @@ import NonEmptyContainers.SeqNE  ( (⋗) )
 -- number ------------------------------
 
 import Number  ( NumSign( MINUS, PLUS )
-               , absT, __fromI, __fromI', fromNumSign, toNum, toNumI )
+               , absT, __fromI, fromNumSign, toNum, toNumI )
 
 -- parser-plus -------------------------
 
@@ -153,9 +153,14 @@ import Text.Fmt  ( fmt )
 -- use units/unit-defs package?  Will that allow for bounded things?
 -- Bounded Duration; use in SRTTimeStamp
 -- Negative Durations
-newtype Duration = Duration { unDuration ∷ Int64 } -- in nanoseconds,
-                                                   -- ≃ 106,751 days ≃ 292y
-                                                   -- ≃ 2,562,047h
+
+-- maxBound @Int64 = 9223372036854775807ns
+--                 = (9223372036s,854775807ns)
+--                 = (153722867m,16s,854775807ns)
+--                 = (2562047h,47m,16s,854775807ns)
+--                 = (106751d,23h,47m,16s,854775807ns)
+--                 ≃ 292y
+newtype Duration = Duration { unDuration ∷ Int64 }
   deriving (Arbitrary, Bounded, Enum, Eq, Ord, Show)
 
 -- | as a bounded type, with sign
@@ -461,14 +466,16 @@ msTests =
 
 {- | (De)Construct a Duration from Hours, Minutes, Seconds & Nanoseconds. -}
 
-hms_ns ∷ Duration → (NumSign,𝕎 2562047,𝕎 60,𝕎 60,𝕎 1_000_000_000)
+hms_ns ∷ Duration → (NumSign,𝕎 2562048,𝕎 60,𝕎 60,𝕎 1_000_000_000)
 hms_ns (Duration n) = let (g,n')  = absT n
                           (s,ns)  = divModulo n'
                           (m,ss)  = divModulo s
                           (hh,mm) = first __fromI (divModulo m)
                        in (g,hh,mm,ss,ns)
 
-hms_ns' ∷ NumSign → 𝕎 2562047 → 𝕎 60 → 𝕎 60 → 𝕎 1_000_000_000 → Duration
+----------
+
+hms_ns' ∷ NumSign → 𝕎 2562048 → 𝕎 60 → 𝕎 60 → 𝕎 1_000_000_000 → Duration
 hms_ns' sgn hh mm ss ns =
   let billion = Proxy @1_000_000_000
       n ∷ ℕ
@@ -477,11 +484,14 @@ hms_ns' sgn hh mm ss ns =
       then throw Overflow
       else Duration $ fromNumSign sgn * fromIntegral n
 
-pattern HMS_NS ∷ NumSign → 𝕎 2562047 → 𝕎 60 → 𝕎 60 → 𝕎 1_000_000_000
+----------
+
+pattern HMS_NS ∷ NumSign → 𝕎 2562048 → 𝕎 60 → 𝕎 60 → 𝕎 1_000_000_000
                          → Duration
 pattern HMS_NS sgn hh mm ss ns ← (hms_ns → (sgn,hh,mm,ss,ns))
         where HMS_NS = hms_ns'
 
+----------
 
 hms_nsTests ∷ TestTree
 hms_nsTests =
@@ -509,6 +519,8 @@ dhms_ns u = let (g,ns) = durBounded u
                 (d,hh) = h  ⫽ Proxy @24
              in (g,d,hh,mm,ss,nn)
 
+----------
+
 dhms_ns' ∷ NumSign → 𝕎 106752 → 𝕎 24 → 𝕎 60 → 𝕎 60 → 𝕎 1_000_000_000 → Duration
 dhms_ns' sgn dd hh mm ss ns =
   let billion = Proxy @1_000_000_000
@@ -520,10 +532,14 @@ dhms_ns' sgn dd hh mm ss ns =
       then throw Overflow
       else Duration $ fromNumSign sgn * fromIntegral n
 
+----------
+
 pattern DHMS_NS ∷ NumSign → 𝕎 106752 → 𝕎 24 → 𝕎 60 → 𝕎 60 → 𝕎 1_000_000_000
                 → Duration
 pattern DHMS_NS g dd hh mm ss ns ← (dhms_ns → (g,dd,hh,mm,ss,ns))
         where DHMS_NS = dhms_ns'
+
+----------
 
 dhms_nsTests ∷ TestTree
 dhms_nsTests =
@@ -547,13 +563,16 @@ dhms_nsTests =
      value.
 -}
 
-hms_ms ∷ Duration → (NumSign,𝕎 2562047,𝕎 60,𝕎 60,𝕎 1000)
+hms_ms ∷ Duration → (NumSign,𝕎 2562048,𝕎 60,𝕎 60,𝕎 1000)
 hms_ms d = let HMS_NS g hh mm ss ns = d
             in (g,hh,mm,ss,𝕎 (round $ toNumI ns ÷ 1_000_000))
 
-pattern HMS_MS ∷ NumSign → 𝕎 2562047 → 𝕎 60 → 𝕎 60 → 𝕎 1000 → Duration
+----------
+
+pattern HMS_MS ∷ NumSign → 𝕎 2562048 → 𝕎 60 → 𝕎 60 → 𝕎 1000 → Duration
 pattern HMS_MS g hh mm ss ms ← (hms_ms → (g,hh,mm,ss,ms))
-        where HMS_MS g hh mm ss ms = HMS_NS g hh mm ss (__fromI' $ toNum ms * 1_000_000)
+--        where HMS_MS g hh mm ss ms = HMS_NS g hh mm ss (__fromI' $ toNum ms * 1_000_000)
+        where HMS_MS g hh mm ss ms = HMS_NS g hh mm ss (ms ⨵ Proxy @1_000_000)
 
 hms_msTests ∷ TestTree
 hms_msTests =
@@ -658,7 +677,7 @@ pattern HOURS n ← (view asHours → n)
         where HOURS n = n ⫣ asHours
 
 {- | A lens onto the hours 'part' of the duration. -}
-hours ∷ Lens' Duration (𝕎 2562047)
+hours ∷ Lens' Duration (𝕎 2562048)
 hours = lens (\ d   → let HMS_NS _ h _ _ _  = d in h)
              (\ d h → let HMS_NS g _ m s ns = d in HMS_NS g h m s ns)
 
