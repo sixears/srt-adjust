@@ -92,14 +92,13 @@ executable srt-adjust
                      , parsers, QuickCheck, tasty, tasty-hunit, tasty-quickcheck
                      , text, text-printer
 
-                     , boundedn
                      , exited               >= 1.0.2.0
                      , fluffy               >= 0.2.13.2
                      , fpath                >= 1.0.3.1
                      , monaderror-io        >= 1.0.2.0
                      , monadio-plus         >= 1.0.1.0
                      , more-unicode
-                     , non-empty-containers
+                     , number
                      , optparse-plus        >= 1.0.1.0
                      , parsec-plus          >= 1.0.1.0
                      , tasty-plus

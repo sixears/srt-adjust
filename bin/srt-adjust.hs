@@ -24,14 +24,11 @@
 -- add completion for duration/timestamp?
 -- add completion for marker texts?
 
-import Prelude  ( Bounded( minBound, maxBound ), Double, Enum, Float
-                , Fractional( (/), fromRational ), Int
+import Prelude  ( Enum, Fractional( (/), fromRational ), Int
                 , Integral( quotRem, toInteger )
                 , Num( (+), (-), (*), abs, signum , fromInteger, negate )
-                , Real( toRational )
-                , (/), (^)
-                , div, divMod, error, floor, fromIntegral, mod, realToFrac
-                , round
+                , Real
+                , (/), error, floor, fromIntegral, round
                 )
 
 -- base --------------------------------
@@ -39,27 +36,22 @@ import Prelude  ( Bounded( minBound, maxBound ), Double, Enum, Float
 import qualified  Data.List
 
 import Control.Applicative  ( many, some )
-import Control.Exception    ( ArithException( Overflow, Underflow ), Exception
-                            , throw )
+import Control.Exception    ( ArithException( Underflow ), Exception, throw )
 import Control.Monad        ( Monad, forM_, return, when )
-import Data.Bifunctor       ( bimap, second )
-import Data.Bool            ( Bool, not, otherwise )
+import Data.Bifunctor       ( bimap )
+import Data.Bool            ( Bool, not )
 import Data.Char            ( Char )
 import Data.Either          ( Either( Left, Right ) )
 import Data.Eq              ( Eq )
-import Data.Foldable        ( foldl1, sum, toList )
 import Data.Function        ( ($), (&), id )
-import Data.Int             ( Int64 )
-import Data.List            ( dropWhileEnd, elem, reverse )
+import Data.List            ( elem )
 import Data.Maybe           ( Maybe( Just, Nothing ) )
-import Data.Ord             ( Ord, (<), (>), (>=) )
+import Data.Ord             ( Ord )
 import Data.Ratio           ( (%), Rational )
 import Data.String          ( IsString, String )
-import Data.Typeable        ( Typeable, typeOf )
-import Data.Word            ( Word16, Word32, Word64 )
+import Data.Word            ( Word32 )
 import System.Exit          ( ExitCode( ExitSuccess ) )
 import System.IO            ( IO, hSetEncoding, stdin, utf8 )
-import Text.Read            ( read )
 import Text.Show            ( Show( show ) )
 
 -- base-unicode-symbols ----------------
@@ -70,27 +62,15 @@ import Data.Function.Unicode  ( (∘) )
 import Data.Monoid.Unicode    ( (⊕) )
 import Prelude.Unicode        ( ℚ, ℤ )
 
--- boundedn ----------------------------
-
-import BoundedN  ( 𝕎, pattern 𝕎 )
-import FromI     ( __fromI' )
-import ToNum     ( toNum, toNumI )
-
 -- data-textual ------------------------
 
 import Data.Textual             ( Parsed( Malformed, Parsed )
-                                , Printable( print )
-                                , Textual( textual )
-                                , fromString, fromText, parseText
-                                , toString, toText
+                                , Printable( print ) , Textual( textual )
+                                , fromText, parseText, toText
                                 )
-import Data.Textual.Fractional  ( Optional( Optional, Required )
-                                , Sign( NonNegative )
-                                , decExpSign, fraction', fractional, fractional'
-                                , optSign, optSlash
-                                )
-import Data.Textual.Integral    ( Decimal( Decimal )
-                                , bounded', nnBounded, nnUpTo, nonNegative )
+import Data.Textual.Fractional  ( Optional( Optional ), decExpSign, fractional'
+                                , optSign )
+import Data.Textual.Integral    ( Decimal( Decimal ), nnBounded )
 
 -- exited ------------------------------
 
@@ -114,7 +94,6 @@ import FPath.File              ( File )
 -- lens --------------------------------
 
 import Control.Lens.Getter  ( view )
-import Control.Lens.Iso     ( Iso', iso )
 import Control.Lens.Lens    ( Lens', lens )
 import Control.Lens.Prism   ( Prism', prism' )
 
@@ -134,9 +113,8 @@ import Data.MonoTraversable  ( Element, MonoFunctor( omap ) )
 -- more-unicode ------------------------
 
 import Data.MoreUnicode.Applicative  ( (⊵), (⋪), (⋫), (∤) )
-import Data.MoreUnicode.Function     ( (⅋) )
 import Data.MoreUnicode.Functor      ( (⊳) )
-import Data.MoreUnicode.Lens         ( (⊣), (⫣), (⊢), (⊧), (⫥) )
+import Data.MoreUnicode.Lens         ( (⊣), (⫣), (⊧), (⫥) )
 import Data.MoreUnicode.Monoid       ( ф, ю )
 import Data.MoreUnicode.Natural      ( ℕ )
 import Data.MoreUnicode.Tasty        ( (≟) )
@@ -145,19 +123,19 @@ import Data.MoreUnicode.Tasty        ( (≟) )
 
 import Control.Monad.Except  ( MonadError, throwError )
 
--- non-empty-containers ----------------
+-- number ------------------------------
 
-import NonEmptyContainers.SeqNE  ( SeqNE, (⋗), pattern (:⫸) )
+import Number  ( NumSign( MINUS ), toNumI )
 
 -- optparse-plus -----------------------
 
-import OptParsePlus  ( argT, optT, readT )
+import OptParsePlus  ( argT, optT )
 
 -- options-applicative -----------------
 
-import Options.Applicative  ( ArgumentFields, Mod, OptionFields, Parser, ReadM
-                            , action, argument, eitherReader, long, metavar
-                            , option, optional, pure, short, value
+import Options.Applicative  ( ArgumentFields, Mod, Parser, ReadM
+                            , action, eitherReader, long, metavar, option
+                            , optional, pure, short, value
                             )
 
 -- parsec ------------------------------
@@ -166,12 +144,9 @@ import Text.Parsec.Prim  ( ParsecT, Stream, parse )
 
 -- parsers -----------------------------
 
-import qualified Text.Parser.Combinators
-
 import Text.Parser.Char         ( CharParsing
-                                , anyChar, char, digit, noneOf, oneOf, string )
-import Text.Parser.Combinators  ( Parsing, (<?>)
-                                , count, sepEndBy, skipOptional, try )
+                                , anyChar, char, noneOf, oneOf, string )
+import Text.Parser.Combinators  ( (<?>), sepEndBy, skipOptional )
 
 -- parsec-plus-base -------------------------
 
@@ -205,7 +180,7 @@ import TastyPlus  ( assertListEqR, assertListEq, propInvertibleText, runTestsP
 
 -- tasty-quickcheck --------------------
 
-import Test.Tasty.QuickCheck  ( elements, testProperty )
+import Test.Tasty.QuickCheck  ( testProperty )
 
 -- text --------------------------------
 
@@ -225,8 +200,7 @@ import Text.Fmt  ( fmt, fmtT )
 --                     local imports                      --
 ------------------------------------------------------------
 
-import Duration  ( Duration( HMS_MS, MS ), NumSign( MINUS )
-                 , asMilliseconds, milliseconds )
+import Duration  ( Duration( HMS_MS, MS ), asMilliseconds )
 
 --------------------------------------------------------------------------------
 

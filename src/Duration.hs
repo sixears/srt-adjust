@@ -57,7 +57,7 @@ import Prelude.Unicode        ( ℚ, ℤ )
 
 -- boundedn ----------------------------
 
-import BoundedN  ( 𝕎, pattern 𝕎, (⨹), (⨴), (⨵), (⫽), (⦼), divModulo )
+import BoundedN  ( 𝕎, pattern 𝕎, (⨹), (⨴), (⨵), (⫽), divModulo )
 
 -- data-textual ------------------------
 
@@ -565,7 +565,6 @@ dhms_nsTests =
 
 hms_ms ∷ Duration → (NumSign,𝕎 2562048,𝕎 60,𝕎 60,𝕎 1000)
 hms_ms d = let HMS_NS g hh mm ss ns = d
---            in (g,hh,mm,ss,𝕎 (round $ toNumI ns ÷ 1_000_000))
             in (g,hh,mm,ss, (fst ∘ (⫽ Proxy @1_000_000)) ns)
 
 ----------
