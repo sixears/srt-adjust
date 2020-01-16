@@ -12,8 +12,14 @@
 {-# LANGUAGE ViewPatterns               #-}
 
 module Duration
-  ( Duration( HMS_MS, MS )
-  , asMilliseconds, milliseconds, microseconds
+  ( Duration( NS, MS, US, SECS, MINS, HOURS, DAYS, DHMS_NS, HMS_MS )
+  , asNanoseconds, fromNanos
+  , asMicroseconds, microseconds, _us
+  , asMilliseconds, milliseconds, _ms
+  , asSeconds, seconds
+  , asMinutes, minutes
+  , asHours, hours
+  , asDays, days
 
   , tests
   )
@@ -313,6 +319,7 @@ asNanoseconds = iso (\ (Duration n) → fromIntegral n) fromNanos
 pattern NS ∷ Int64 → Duration
 pattern NS n ← Duration n
         where NS n = Duration n
+{-# COMPLETE NS #-}
 
 nsTests ∷ TestTree
 nsTests =
@@ -340,6 +347,7 @@ asMicroseconds = iso ((÷ 1_000) ∘ fromInteger ∘ view asNanoseconds)
 pattern US ∷ ℚ → Duration
 pattern US n ← (view asMicroseconds → n)
         where US n = n ⫣ asMicroseconds
+{-# COMPLETE US #-}
 
 {- | View/Set the microseconds 'part' of a Duration; getting will get the number
      of whole microseconds (rounded towards zero) ignoring milliseconds and
@@ -408,6 +416,7 @@ asMilliseconds = iso ((÷ 1_000_000) ∘ fromInteger ∘ view asNanoseconds)
 pattern MS ∷ ℚ → Duration
 pattern MS n ← (view asMilliseconds → n)
         where MS n = n ⫣ asMilliseconds
+{-# COMPLETE MS #-}
 
 {- | View/Set the milliseconds 'part' of a Duration; getting will get the number
      of whole milliseconds (rounded towards zero) ignoring seconds and
@@ -490,6 +499,7 @@ pattern HMS_NS ∷ NumSign → 𝕎 2562048 → 𝕎 60 → 𝕎 60 → 𝕎 1_0
                          → Duration
 pattern HMS_NS sgn hh mm ss ns ← (hms_ns → (sgn,hh,mm,ss,ns))
         where HMS_NS = hms_ns'
+{-# COMPLETE HMS_NS #-}
 
 ----------
 
@@ -538,6 +548,7 @@ pattern DHMS_NS ∷ NumSign → 𝕎 106752 → 𝕎 24 → 𝕎 60 → 𝕎 60 
                 → Duration
 pattern DHMS_NS g dd hh mm ss ns ← (dhms_ns → (g,dd,hh,mm,ss,ns))
         where DHMS_NS = dhms_ns'
+{-# COMPLETE DHMS_NS #-}
 
 ----------
 
@@ -572,6 +583,7 @@ hms_ms d = let HMS_NS g hh mm ss ns = d
 pattern HMS_MS ∷ NumSign → 𝕎 2562048 → 𝕎 60 → 𝕎 60 → 𝕎 1000 → Duration
 pattern HMS_MS g hh mm ss ms ← (hms_ms → (g,hh,mm,ss,ms))
         where HMS_MS g hh mm ss ms = HMS_NS g hh mm ss (ms ⨵ Proxy @1_000_000)
+{-# COMPLETE HMS_NS #-}
 
 hms_msTests ∷ TestTree
 hms_msTests =
@@ -600,6 +612,7 @@ asSeconds = iso ((÷ 1_000_000_000) ∘ fromInteger ∘ view asNanoseconds)
 pattern SECS ∷ ℚ → Duration
 pattern SECS n ← (view asSeconds → n)
         where SECS n = n ⫣ asSeconds
+{-# COMPLETE SECS #-}
 
 {- | A lens onto the seconds 'part' of the duration. -}
 seconds ∷ Lens' Duration (𝕎 60)
@@ -637,6 +650,7 @@ asMinutes = iso ((÷ 60_000_000_000) ∘ fromInteger ∘ view asNanoseconds)
 pattern MINS ∷ ℚ → Duration
 pattern MINS n ← (view asMinutes → n)
         where MINS n = n ⫣ asMinutes
+{-# COMPLETE MINS #-}
 
 {- | A lens onto the minutes 'part' of the duration. -}
 minutes ∷ Lens' Duration (𝕎 60)
@@ -674,6 +688,7 @@ asHours = iso ((÷ 3_600_000_000_000) ∘ fromInteger ∘ view asNanoseconds)
 pattern HOURS ∷ ℚ → Duration
 pattern HOURS n ← (view asHours → n)
         where HOURS n = n ⫣ asHours
+{-# COMPLETE HOURS #-}
 
 {- | A lens onto the hours 'part' of the duration. -}
 hours ∷ Lens' Duration (𝕎 2562048)
@@ -711,6 +726,7 @@ asDays = iso ((÷ 86_400_000_000_000) ∘ fromInteger ∘ view asNanoseconds)
 pattern DAYS ∷ ℚ → Duration
 pattern DAYS n ← (view asDays → n)
         where DAYS n = n ⫣ asDays
+{-# COMPLETE DAYS #-}
 
 {- | A lens onto the days 'part' of the duration. -}
 days ∷ Lens' Duration (𝕎 106752)
