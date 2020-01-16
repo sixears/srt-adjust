@@ -53,6 +53,7 @@ library
                     , SRT.Shifty
                     , SRT.Skew
                     , SRT.SRTTimeStamp
+                    , SRT.SRTTiming
 
   -- modules included in this library but not exported.
   other-modules:       

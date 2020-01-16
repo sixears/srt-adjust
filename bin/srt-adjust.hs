@@ -186,21 +186,14 @@ import Text.Fmt  ( fmt, fmtT )
 --                     local imports                      --
 ------------------------------------------------------------
 
-import SRT.Shifty       ( Shifty( shift ) )
-import SRT.Skew         ( Skew( MS_S, Skew ), to_ms_s )
-import SRT.SRTTimeStamp ( SRTTimeStamp( unSRTTimeStamp ) )
-
---------------------------------------------------------------------------------
-
--- (÷) ∷ ℤ → ℤ → Rational
--- (÷) = (%)
+import SRT.Shifty        ( Shifty( shift ) )
+import SRT.Skew          ( Skew( MS_S, Skew ), to_ms_s )
+import SRT.SRTTimeStamp  ( SRTTimeStamp( unSRTTimeStamp ) )
+import SRT.SRTTiming     ( SRTTiming( SRTTiming ) )
 
 --------------------------------------------------------------------------------
 
 type 𝔹 = Bool
-
--- ePatSymExhaustive ∷ String → α
--- ePatSymExhaustive s = error $ s ⊕ "https://gitlab.haskell.org/ghc/ghc/issues/10339"
 
 (⧐) ∷ MonoFunctor mono ⇒ (Element mono → Element mono) → mono → mono
 (⧐) = omap
@@ -222,49 +215,6 @@ nl ∷ (CharParsing η, Monad η) ⇒ η ()
 nl = skipOptional (char '\r') ⋫ char '\n' ⋫ return () <?> "cr/nl"
 
 ------------------------------------------------------------
-
-------------------------------------------------------------
-
-data SRTTiming = SRTTiming SRTTimeStamp SRTTimeStamp
-  deriving (Eq, Show)
-
-type instance Element SRTTiming = SRTTimeStamp
-
-instance MonoFunctor SRTTiming where
-  omap ∷ (SRTTimeStamp → SRTTimeStamp) → SRTTiming → SRTTiming
-  omap f (SRTTiming start end) = SRTTiming (f start) (f end)
-
-instance Shifty SRTTiming where
-  shift ∷ Duration → Skew → SRTTiming → SRTTiming
-  shift off sf (SRTTiming t t') = SRTTiming (shift off sf t) (shift off sf t')
-
-instance Printable SRTTiming where
-  print (SRTTiming begin end) = P.text $ [fmt|%T --> %T|] begin end
-
-instance Textual SRTTiming where
-  textual = SRTTiming ⊳ textual ⊵ string " --> " ⋫ textual
-
-instance Parsecable SRTTiming where
-  parser = textual
-
-instance Arbitrary SRTTiming where
-  arbitrary = SRTTiming ⊳ arbitrary ⊵ arbitrary
-
---------------------
-
-srtTimingTests ∷ TestTree
-srtTimingTests =
-  testGroup "SRTTiming"
-            [ testCase "fromText" $ Just srtTimingRef ≟ fromText srtTiming
-            , testCase "toText"   $ srtTiming ≟ toText srtTimingRef
-            , testCase "parsec"   $
-                    Right (SRTTiming 1_000 4_074)
-                  ≟ parsec @SRTTiming @ParseError @(Either ParseError)
-                           @Text @String "srtTimestamp" srtTiming
-            , testProperty "invertibleText" (propInvertibleText @SRTTiming)
-            , testCase "shift" $
-                  SRTTiming 1800 4_567 ≟ shift (MS 1000) (MS_S (-100)) srtTimingRef
-            ]
 
 ------------------------------------------------------------
 
@@ -759,11 +709,11 @@ three = 3
 
 --------------------
 
-srtTiming ∷ Text
-srtTiming = "00:00:01,000 --> 00:00:04,074"
+-- srtTiming ∷ Text
+-- srtTiming = "00:00:01,000 --> 00:00:04,074"
 
-srtTimingRef ∷ SRTTiming
-srtTimingRef = SRTTiming 1_000 4_074
+-- srtTimingRef ∷ SRTTiming
+-- srtTimingRef = SRTTiming 1_000 4_074
 
 --------------------
 
@@ -902,8 +852,7 @@ srtSequenceRefShifted =
 ----------------------------------------
 
 tests ∷ TestTree
-tests = testGroup "srt-adjust" [ srtTimingTests
-                               , srtSubtitleTextTests, srtSubtitleTests
+tests = testGroup "srt-adjust" [ srtSubtitleTextTests, srtSubtitleTests
                                , srtSequenceTests, optionsAdjustTests
                                ]
 
