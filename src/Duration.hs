@@ -43,7 +43,7 @@ import Data.Ord             ( Ord, (<), (>) )
 import Data.Proxy           ( Proxy( Proxy ) )
 import Data.Ratio           ( Rational, (%) )
 import Data.String          ( String )
-import Data.Tuple           ( snd )
+import Data.Tuple           ( fst, snd )
 import System.Exit          ( ExitCode )
 import System.IO            ( IO )
 import Text.Read            ( read )
@@ -57,7 +57,7 @@ import Prelude.Unicode        ( ℚ, ℤ )
 
 -- boundedn ----------------------------
 
-import BoundedN  ( 𝕎, pattern 𝕎, (⨹), (⨴), (⨵), (⫽), divModulo )
+import BoundedN  ( 𝕎, pattern 𝕎, (⨹), (⨴), (⨵), (⫽), (⦼), divModulo )
 
 -- data-textual ------------------------
 
@@ -334,7 +334,7 @@ nsTests =
 {- | View a duration as microseconds. -}
 asMicroseconds ∷ Iso' Duration ℚ
 asMicroseconds = iso ((÷ 1_000) ∘ fromInteger ∘ view asNanoseconds)
-                  (Duration ∘ round ∘ (* 1_000))
+                     (Duration ∘ round ∘ (* 1_000))
 
 {- | (De)Construct a Duration from a number of microseconds. -}
 pattern US ∷ ℚ → Duration
@@ -402,7 +402,7 @@ _us = lens (\ d → let (_,ns) = durBounded d
 {- | View a duration as milliseconds. -}
 asMilliseconds ∷ Iso' Duration ℚ
 asMilliseconds = iso ((÷ 1_000_000) ∘ fromInteger ∘ view asNanoseconds)
-                  (Duration ∘ round ∘ (* 1_000_000))
+                     (Duration ∘ round ∘ (* 1_000_000))
 
 {- | (De)Construct a Duration from a number of milliseconds. -}
 pattern MS ∷ ℚ → Duration
@@ -565,13 +565,13 @@ dhms_nsTests =
 
 hms_ms ∷ Duration → (NumSign,𝕎 2562048,𝕎 60,𝕎 60,𝕎 1000)
 hms_ms d = let HMS_NS g hh mm ss ns = d
-            in (g,hh,mm,ss,𝕎 (round $ toNumI ns ÷ 1_000_000))
+--            in (g,hh,mm,ss,𝕎 (round $ toNumI ns ÷ 1_000_000))
+            in (g,hh,mm,ss, (fst ∘ (⫽ Proxy @1_000_000)) ns)
 
 ----------
 
 pattern HMS_MS ∷ NumSign → 𝕎 2562048 → 𝕎 60 → 𝕎 60 → 𝕎 1000 → Duration
 pattern HMS_MS g hh mm ss ms ← (hms_ms → (g,hh,mm,ss,ms))
---        where HMS_MS g hh mm ss ms = HMS_NS g hh mm ss (__fromI' $ toNum ms * 1_000_000)
         where HMS_MS g hh mm ss ms = HMS_NS g hh mm ss (ms ⨵ Proxy @1_000_000)
 
 hms_msTests ∷ TestTree
@@ -580,14 +580,14 @@ hms_msTests =
       dur' = Duration (-4_834_568_000_000)
       HMS_MS g hh mm ss ms = dur
    in testGroup "HMS_MS"
-                [ testCase "hms_ms"   $  (PLUS,𝕎 1,𝕎 20,𝕎 34,𝕎 568) ≟ hms_ms dur
+                [ testCase "hms_ms"   $  (PLUS,𝕎 1,𝕎 20,𝕎 34,𝕎 567) ≟ hms_ms dur
                 , testCase "→ HMS_MS" $  dur' ≟ HMS_MS MINUS (𝕎 1) (𝕎 20) (𝕎 34)
                                                              (𝕎 568)
                 , testCase "g"        $ PLUS  ≟ g
                 , testCase "hh"       $ 𝕎   1 ≟ hh
                 , testCase "mm"       $ 𝕎  20 ≟ mm
                 , testCase "ss"       $ 𝕎  34 ≟ ss
-                , testCase "ms"       $ 𝕎 568 ≟ ms
+                , testCase "ms"       $ 𝕎 567 ≟ ms
                 ]
 
 ----------------------------------------
