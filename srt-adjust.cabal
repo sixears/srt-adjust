@@ -50,13 +50,15 @@ library
   ghc-options:        -W -Wall -fhelpful-errors
   -- Modules exported by the library.
   exposed-modules:    Duration
-                    , SRT.Shifty
                     , SRT.Skew
+                    , SRT.SRTSubtitleText
                     , SRT.SRTTimeStamp
                     , SRT.SRTTiming
 
+                    , SRT.Shifty,   SRT.TFunctor,     SRT.ParserHelp
+
   -- modules included in this library but not exported.
-  other-modules:       
+  other-modules:
 
   default-extensions: NoImplicitPrelude
   -- LANGUAGE extensions used by modules in this package.

@@ -1,7 +1,7 @@
 -- {-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+-- {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE InstanceSigs               #-}
 {-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
@@ -30,18 +30,17 @@ import Prelude  ( Fractional( (/) ), Int, Num( (+), (-), (*) ), (/), floor )
 
 import qualified  Data.List
 
-import Control.Applicative  ( many, some )
+import Control.Applicative  ( many )
 import Control.Exception    ( Exception )
-import Control.Monad        ( Monad, forM_, return, when )
+import Control.Monad        ( forM_, return, when )
 import Data.Bifunctor       ( bimap )
-import Data.Bool            ( Bool, not )
+import Data.Bool            ( Bool )
 import Data.Char            ( Char )
 import Data.Either          ( Either( Left, Right ) )
 import Data.Eq              ( Eq )
 import Data.Function        ( ($), (&) )
-import Data.List            ( elem )
 import Data.Maybe           ( Maybe( Just, Nothing ) )
-import Data.String          ( IsString, String )
+import Data.String          ( String )
 import Data.Word            ( Word32 )
 import System.Exit          ( ExitCode( ExitSuccess ) )
 import System.IO            ( IO, hSetEncoding, stdin, utf8 )
@@ -49,7 +48,6 @@ import Text.Show            ( Show( show ) )
 
 -- base-unicode-symbols ----------------
 
-import Data.Bool.Unicode      ( (∨) )
 import Data.Eq.Unicode        ( (≡), (≢) )
 import Data.Function.Unicode  ( (∘) )
 import Data.Monoid.Unicode    ( (⊕) )
@@ -133,23 +131,18 @@ import Text.Parsec.Prim  ( ParsecT, Stream, parse )
 
 -- parsers -----------------------------
 
-import Text.Parser.Char         ( CharParsing
-                                , anyChar, char, noneOf, oneOf, string )
-import Text.Parser.Combinators  ( (<?>), sepEndBy, skipOptional )
-
--- parsec-plus-base -------------------------
-
-import ParsecPlus  ( AsParseError( _ParseError ), IOParseError, ParseError )
+import Text.Parser.Char         ( anyChar, char, string )
+import Text.Parser.Combinators  ( sepEndBy, skipOptional )
 
 -- parsec-plus -------------------------
 
+import ParsecPlus  ( AsParseError( _ParseError ), IOParseError, ParseError )
 import ParsecPlus  ( Parsecable( parsec, parser ), parsecFileUTF8 )
 
 -- QuickCheck --------------------------
 
 import Test.QuickCheck.Arbitrary ( Arbitrary( arbitrary ) )
-import Test.QuickCheck.Gen       ( Gen, listOf, listOf1, suchThat )
-import Test.QuickCheck.Modifiers ( PrintableString( getPrintableString ) )
+import Test.QuickCheck.Gen       ( listOf )
 
 -- tasty -------------------------------
 
@@ -170,8 +163,7 @@ import Test.Tasty.QuickCheck  ( testProperty )
 
 -- text --------------------------------
 
-import Data.Text     ( Text, filter, head, intercalate
-                     , isInfixOf, null, pack, unlines )
+import Data.Text     ( Text, filter, intercalate, isInfixOf, pack, unlines )
 import qualified  Data.Text.IO  as  TextIO
 
 -- text-printer ------------------------
@@ -186,84 +178,33 @@ import Text.Fmt  ( fmt, fmtT )
 --                     local imports                      --
 ------------------------------------------------------------
 
-import SRT.Shifty        ( Shifty( shift ) )
-import SRT.Skew          ( Skew( MS_S, Skew ), to_ms_s )
-import SRT.SRTTimeStamp  ( SRTTimeStamp( unSRTTimeStamp ) )
-import SRT.SRTTiming     ( SRTTiming( SRTTiming ) )
+import SRT.ParserHelp      ( nl, whitespaces )
+import SRT.Shifty          ( Shifty( shift ) )
+import SRT.TFunctor        ( TFunctor( tmap ) )
+
+import SRT.Skew            ( Skew( MS_S, Skew ), to_ms_s )
+import SRT.SRTSubtitleText ( SRTSubtitleText( SRTSubtitleText
+                                            , unSRTSubtitleText ) )
+import SRT.SRTTimeStamp    ( SRTTimeStamp( unSRTTimeStamp ) )
+import SRT.SRTTiming       ( SRTTiming( SRTTiming ) )
 
 --------------------------------------------------------------------------------
 
-type 𝔹 = Bool
+-- type 𝔹 = Bool
 
 (⧐) ∷ MonoFunctor mono ⇒ (Element mono → Element mono) → mono → mono
 (⧐) = omap
 
-{- | A `MonoFunctor` over Text; defined explicitly to allow types to be an
-     instance of this as well as a regular MonoFunctor -}
-class TFunctor α where
-  tmap ∷ (Text → Text) → α → α
-
 -- `Text.Parser.Char.spaces` parses *all* spaces, including newline.  That's not
 -- what we need for parsing/skipping spaces at the end of the line, hence this
 -- function
-whitespaces ∷ CharParsing η ⇒ η String
-whitespaces = many $ oneOf " \t"
+-- whitespaces ∷ CharParsing η ⇒ η String
+-- whitespaces = many $ oneOf " \t"
 
 -- Parse a newline, optionally preceded by a carriage-return
 -- (flucking windoze...)
-nl ∷ (CharParsing η, Monad η) ⇒ η ()
-nl = skipOptional (char '\r') ⋫ char '\n' ⋫ return () <?> "cr/nl"
-
-------------------------------------------------------------
-
-------------------------------------------------------------
-
-newtype SRTSubtitleText = SRTSubtitleText { unSRTSubtitleText ∷ Text }
-  deriving (Eq, IsString, Show)
-
-instance TFunctor SRTSubtitleText where
-  tmap ∷ (Text → Text) → SRTSubtitleText → SRTSubtitleText
-  tmap f (SRTSubtitleText t) = SRTSubtitleText (f t)
-
-instance Printable SRTSubtitleText where
-  print (SRTSubtitleText t) = P.text t
-
-instance Textual SRTSubtitleText where
-  textual = SRTSubtitleText ⊳ unlines ⊳
-              some (pack ⊳ ((:) ⊳ (whitespaces ⋫ noneOf " \t\n\v\r")
-                                ⊵ many (noneOf "\n\r") ⋪ nl))
-
-instance Parsecable SRTSubtitleText where
-  parser = textual
-
-instance Arbitrary SRTSubtitleText where
-  arbitrary ∷ Gen SRTSubtitleText
-  -- create a list of texts, none beginning with a space, none containing a
-  -- newline; and join them with a newline (incl. a terminating newline)
-  arbitrary = let isValidLine ∷ Text → 𝔹
-                  isValidLine t = not (null t ∨ (head t `elem` (" \t"∷ [Char])))
-                  genPrintableText ∷ Gen Text
-                  genPrintableText = pack ∘ getPrintableString ⊳ arbitrary
-                  genLine ∷ Gen Text
-                  genLine = suchThat (filter (≢ '\n') ⊳ genPrintableText)
-                                     isValidLine
-               in SRTSubtitleText ∘ unlines ⊳ listOf1 genLine
-
---------------------
-
-srtSubtitleTextTests ∷ TestTree
-srtSubtitleTextTests =
-  testGroup "SRTSubtitleText"
-            [ testCase "fromText" $
-                    Just srtSubtitleTextRef ≟ fromText srtSubtitleText
-            , testCase "toText"   $ srtSubtitleText ≟ toText srtSubtitleTextRef
-            , testCase "parsec"   $
-                    Right srtSubtitleTextRef
-                  ≟ parsec @SRTSubtitleText @ParseError @(Either ParseError)
-                           @Text @String "srtTimestamp" srtSubtitleText
-            , testProperty "invertibleText"
-                           (propInvertibleText @SRTSubtitleText)
-            ]
+-- nl ∷ (CharParsing η, Monad η) ⇒ η ()
+-- nl = skipOptional (char '\r') ⋫ char '\n' ⋫ return () <?> "cr/nl"
 
 ------------------------------------------------------------
 
@@ -717,16 +658,16 @@ three = 3
 
 --------------------
 
-srtSubtitleText ∷ Text
-srtSubtitleText = unlines
-  [ "Subtitles downloaded from www.OpenSubtitles.org"
-  , "Deklan, that's enough."
-  ]
+-- srtSubtitleText ∷ Text
+-- srtSubtitleText = unlines
+--   [ "Subtitles downloaded from www.OpenSubtitles.org"
+--   , "Deklan, that's enough."
+--   ]
 
-srtSubtitleTextRef ∷ SRTSubtitleText
-srtSubtitleTextRef =
-  SRTSubtitleText $ unlines [ "Subtitles downloaded from www.OpenSubtitles.org"
-                            , "Deklan, that's enough." ]
+-- srtSubtitleTextRef ∷ SRTSubtitleText
+-- srtSubtitleTextRef =
+--   SRTSubtitleText $ unlines [ "Subtitles downloaded from www.OpenSubtitles.org"
+--                             , "Deklan, that's enough." ]
 --------------------
 
 srtSubtitle ∷ Text
@@ -852,7 +793,7 @@ srtSequenceRefShifted =
 ----------------------------------------
 
 tests ∷ TestTree
-tests = testGroup "srt-adjust" [ srtSubtitleTextTests, srtSubtitleTests
+tests = testGroup "srt-adjust" [ srtSubtitleTests
                                , srtSequenceTests, optionsAdjustTests
                                ]
 

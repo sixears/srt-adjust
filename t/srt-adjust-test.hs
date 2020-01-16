@@ -36,11 +36,13 @@ import TastyPlus    ( runTests_, tastyOptParser )
 import qualified  Duration
 import qualified  SRT.SRTTimeStamp
 import qualified  SRT.SRTTiming
+import qualified  SRT.SRTSubtitleText
 
 tests ∷ TestTree
 tests = testGroup "srt-adjust" [ Duration.tests
                                , SRT.SRTTimeStamp.tests
                                , SRT.SRTTiming.tests
+                               , SRT.SRTSubtitleText.tests
                                ]
 
 -------------------------------------------------------------------------------
