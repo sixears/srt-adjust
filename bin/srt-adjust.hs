@@ -1,23 +1,12 @@
--- {-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
--- {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE InstanceSigs               #-}
-{-# LANGUAGE LambdaCase                 #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE NoImplicitPrelude          #-}
--- {-# LANGUAGE NumericUnderscores         #-}
-{-# LANGUAGE OverloadedStrings          #-}
--- {-# LANGUAGE PatternSynonyms            #-}
-
--- do we need this?  can we get rid of the foralls?
--- {-# LANGUAGE RankNTypes #-}
--- {-# LANGUAGE QuasiQuotes                #-}
--- {-# LANGUAGE ScopedTypeVariables        #-}
--- {-# LANGUAGE TypeApplications           #-}
-{-# LANGUAGE TypeFamilies               #-}
-{-# LANGUAGE UnicodeSyntax              #-}
--- {-# LANGUAGE ViewPatterns               #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE InstanceSigs          #-}
+{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NoImplicitPrelude     #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE UnicodeSyntax         #-}
 
 -- TODO:
 -- split out components
@@ -38,10 +27,9 @@ import Data.Bool            ( Bool )
 import Data.Char            ( Char )
 import Data.Either          ( Either( Left, Right ) )
 import Data.Eq              ( Eq )
-import Data.Function        ( ($), (&) )
+import Data.Function        ( ($) )
 import Data.Maybe           ( Maybe( Just, Nothing ) )
 import Data.String          ( String )
-import Data.Word            ( Word32 )
 import System.Exit          ( ExitCode( ExitSuccess ) )
 import System.IO            ( IO, hSetEncoding, stdin, utf8 )
 import Text.Show            ( Show( show ) )
@@ -61,7 +49,7 @@ import Data.Textual             ( Parsed( Malformed, Parsed )
                                 )
 import Data.Textual.Fractional  ( Optional( Optional ), decExpSign, fractional'
                                 , optSign )
-import Data.Textual.Integral    ( Decimal( Decimal ), nnBounded )
+import Data.Textual.Integral    ( Decimal( Decimal ) )
 
 -- duration ----------------------------
 
@@ -103,9 +91,9 @@ import Data.MonoTraversable  ( Element, MonoFunctor( omap ) )
 
 -- more-unicode ------------------------
 
-import Data.MoreUnicode.Applicative  ( (⊵), (⋪), (⋫), (∤) )
+import Data.MoreUnicode.Applicative  ( (⊵), (⋫), (∤) )
 import Data.MoreUnicode.Functor      ( (⊳) )
-import Data.MoreUnicode.Lens         ( (⊣), (⊧), (⫥) )
+import Data.MoreUnicode.Lens         ( (⊣), (⫥) )
 import Data.MoreUnicode.Monoid       ( ф, ю )
 import Data.MoreUnicode.Natural      ( ℕ )
 import Data.MoreUnicode.Tasty        ( (≟) )
@@ -178,103 +166,18 @@ import Text.Fmt  ( fmt, fmtT )
 --                     local imports                      --
 ------------------------------------------------------------
 
-import SRT.ParserHelp      ( nl, whitespaces )
+import SRT.ParserHelp      ( nl )
 import SRT.Shifty          ( Shifty( shift ) )
 import SRT.TFunctor        ( TFunctor( tmap ) )
 
 import SRT.Skew            ( Skew( MS_S, Skew ), to_ms_s )
+import SRT.SRTSubtitle     ( SRTSubtitle( SRTSubtitle ), subtitle, timing )
 import SRT.SRTSubtitleText ( SRTSubtitleText( SRTSubtitleText
                                             , unSRTSubtitleText ) )
 import SRT.SRTTimeStamp    ( SRTTimeStamp( unSRTTimeStamp ) )
 import SRT.SRTTiming       ( SRTTiming( SRTTiming ) )
 
 --------------------------------------------------------------------------------
-
--- type 𝔹 = Bool
-
-(⧐) ∷ MonoFunctor mono ⇒ (Element mono → Element mono) → mono → mono
-(⧐) = omap
-
--- `Text.Parser.Char.spaces` parses *all* spaces, including newline.  That's not
--- what we need for parsing/skipping spaces at the end of the line, hence this
--- function
--- whitespaces ∷ CharParsing η ⇒ η String
--- whitespaces = many $ oneOf " \t"
-
--- Parse a newline, optionally preceded by a carriage-return
--- (flucking windoze...)
--- nl ∷ (CharParsing η, Monad η) ⇒ η ()
--- nl = skipOptional (char '\r') ⋫ char '\n' ⋫ return () <?> "cr/nl"
-
-------------------------------------------------------------
-
-data SRTSubtitle = SRTSubtitle { _id       ∷ Word32
-                               , _timing   ∷ SRTTiming
-                               , _subtitle ∷ SRTSubtitleText
-                               }
-  deriving (Eq, Show)
-
-timing ∷ Lens' SRTSubtitle SRTTiming
-timing = lens (\ SRTSubtitle { _timing = t } → t)
-              (\ subt t → subt { _timing = t })
-
-subtitle ∷ Lens' SRTSubtitle SRTSubtitleText
-subtitle = lens (\ SRTSubtitle { _subtitle = t } → t)
-                (\ subt t → subt { _subtitle = t })
-
-
--- type instance Element SRTSubtitle = SRTTimeStamp
-
-{-
-instance MonoFunctor SRTSubtitle where
-  omap ∷ (Text → Text) → SRTSubtitle → SRTSubtitle
-  omap f (SRTSubtitle i t s) = SRTSubtitle i t (f `tmap` s)
--}
-
-instance TFunctor SRTSubtitle where
-  tmap ∷ (Text → Text) → SRTSubtitle → SRTSubtitle
-  tmap f (SRTSubtitle i t s) = SRTSubtitle i t (f `tmap` s)
-
-instance Shifty SRTSubtitle where
-  shift ∷ Duration → Skew → SRTSubtitle → SRTSubtitle
-  shift off sf subt = subt & timing ⊧ (shift off sf)
-
-instance Printable SRTSubtitle where
-  print (SRTSubtitle i t s) = P.text $ intercalate "\n" [ toText i
-                                                        , toText t
-                                                        , toText s
-                                                        ]
-
-instance Textual SRTSubtitle where
-  textual = SRTSubtitle ⊳ nnBounded Decimal ⋪ whitespaces ⋪ nl
-                        ⊵ textual ⋪ whitespaces ⋪ nl
-                        ⊵ textual
-
-instance Parsecable SRTSubtitle where
-  parser = textual
-
-instance Arbitrary SRTSubtitle where
-  arbitrary = SRTSubtitle ⊳ arbitrary ⊵ arbitrary ⊵ arbitrary
-
---------------------
-
-srtSubtitleTests ∷ TestTree
-srtSubtitleTests =
-  testGroup "SRTSubtitle"
-            [ testCase "fromText" $ Just srtSubtitleRef ≟ fromText srtSubtitle
-            , testCase "toText"   $
-                  filter (≢'\r') srtSubtitle ≟ toText srtSubtitleRef
-            , testCase "parsec"   $
-                    Right srtSubtitleRef
-                  ≟ parsec @SRTSubtitle @ParseError @(Either ParseError)
-                           @Text @String "srtTimestamp" srtSubtitle
-            , testProperty "invertibleText" (propInvertibleText @SRTSubtitle)
-            , testCase "shift" $
-                    srtSubtitleRef { _timing = SRTTiming 1530 4665 }
-                  ≟ shift (MS 500) (MS_S 20) srtSubtitleRef
-            ]
-
-------------------------------------------------------------
 
 data SRTSequence = SRTSequence { unSRTSequence ∷ [SRTSubtitle] }
   deriving (Eq, Show)
@@ -670,22 +573,22 @@ three = 3
 --                             , "Deklan, that's enough." ]
 --------------------
 
-srtSubtitle ∷ Text
-srtSubtitle = unlines
-  [ "1"
-  , "00:00:01,000 --> 00:00:04,074\r"
-  , "Subtitles downloaded from www.OpenSubtitles.org\r"
-  ]
+-- srtSubtitle ∷ Text
+-- srtSubtitle = unlines
+--   [ "1"
+--   , "00:00:01,000 --> 00:00:04,074\r"
+--   , "Subtitles downloaded from www.OpenSubtitles.org\r"
+--   ]
 
-srtSubtitleRef ∷ SRTSubtitle
-srtSubtitleRef =
-  let expectText =
-        SRTSubtitleText $
-            unlines [ "Subtitles downloaded from www.OpenSubtitles.org" ]
-      expectTimeStampBegin = 1_000
-      expectTimeStampEnd   = 4_074
-      expectTiming = SRTTiming expectTimeStampBegin expectTimeStampEnd
-   in SRTSubtitle 1 expectTiming expectText
+-- srtSubtitleRef ∷ SRTSubtitle
+-- srtSubtitleRef =
+--   let expectText =
+--         SRTSubtitleText $
+--             unlines [ "Subtitles downloaded from www.OpenSubtitles.org" ]
+--       expectTimeStampBegin = 1_000
+--       expectTimeStampEnd   = 4_074
+--       expectTiming = SRTTiming expectTimeStampBegin expectTimeStampEnd
+--    in SRTSubtitle 1 expectTiming expectText
 
 --------------------
 
@@ -793,9 +696,7 @@ srtSequenceRefShifted =
 ----------------------------------------
 
 tests ∷ TestTree
-tests = testGroup "srt-adjust" [ srtSubtitleTests
-                               , srtSequenceTests, optionsAdjustTests
-                               ]
+tests = testGroup "srt-adjust" [ srtSequenceTests, optionsAdjustTests ]
 
 ----------------------------------------
 

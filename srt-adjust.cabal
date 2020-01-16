@@ -51,6 +51,7 @@ library
   -- Modules exported by the library.
   exposed-modules:    Duration
                     , SRT.Skew
+                    , SRT.SRTSubtitle
                     , SRT.SRTSubtitleText
                     , SRT.SRTTimeStamp
                     , SRT.SRTTiming
