@@ -21,10 +21,6 @@ import Options.Applicative.Builder  ( failureCode, fullDesc, info, prefs
                                     , progDesc, showHelpOnError )
 import Options.Applicative.Extra    ( customExecParser, helper )
 
--- tasty -------------------------------
-
-import Test.Tasty  ( TestTree, testGroup )
-
 -- tasty-plus --------------------------
 
 import TastyPlus    ( runTests_, tastyOptParser )
@@ -33,19 +29,7 @@ import TastyPlus    ( runTests_, tastyOptParser )
 --                     local imports                      --
 ------------------------------------------------------------
 
-import qualified  Duration
-import qualified  SRT.SRTTimeStamp
-import qualified  SRT.SRTTiming
-import qualified  SRT.SRTSubtitle
-import qualified  SRT.SRTSubtitleText
-
-tests ∷ TestTree
-tests = testGroup "srt-adjust" [ Duration.tests
-                               , SRT.SRTTimeStamp.tests
-                               , SRT.SRTTiming.tests
-                               , SRT.SRTSubtitle.tests
-                               , SRT.SRTSubtitleText.tests
-                               ]
+import SRT.T.Tests  ( tests )
 
 -------------------------------------------------------------------------------
 

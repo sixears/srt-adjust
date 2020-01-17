@@ -51,15 +51,19 @@ library
   -- Modules exported by the library.
   exposed-modules:    Duration
                     , SRT.Skew
+                    , SRT.SRTSequence
                     , SRT.SRTSubtitle
                     , SRT.SRTSubtitleText
                     , SRT.SRTTimeStamp
                     , SRT.SRTTiming
 
-                    , SRT.Shifty,   SRT.TFunctor,     SRT.ParserHelp
+                    , SRT.T.Tests
 
   -- modules included in this library but not exported.
-  other-modules:
+  other-modules:      SRT.Shifty
+                    , SRT.TFunctor
+                    , SRT.ParserHelp
+
 
   default-extensions: NoImplicitPrelude
   -- LANGUAGE extensions used by modules in this package.
