@@ -1,5 +1,5 @@
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE FlexibleInstances     #-}
+-- {-# LANGUAGE FlexibleContexts      #-}
+-- {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE InstanceSigs          #-}
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -17,33 +17,26 @@ import Prelude  ( Fractional( (/) ), Int, Num( (+), (-), (*) ), (/), floor )
 
 -- base --------------------------------
 
-import Control.Applicative  ( many )
-import Control.Exception    ( Exception )
-import Control.Monad        ( forM_, return, when )
-import Data.Bifunctor       ( bimap )
-import Data.Char            ( Char )
-import Data.Either          ( Either( Right ) )
-import Data.Eq              ( Eq )
-import Data.Function        ( ($) )
-import Data.Maybe           ( Maybe( Just, Nothing ) )
-import Data.String          ( String )
-import System.Exit          ( ExitCode( ExitSuccess ) )
-import System.IO            ( IO, hSetEncoding, stdin, utf8 )
-import Text.Show            ( Show( show ) )
+import Control.Exception  ( Exception )
+import Control.Monad      ( forM_, return, when )
+import Data.Either        ( Either( Right ) )
+import Data.Eq            ( Eq )
+import Data.Function      ( ($) )
+import Data.Maybe         ( Maybe( Just, Nothing ) )
+import Data.String        ( String )
+import System.Exit        ( ExitCode( ExitSuccess ) )
+import System.IO          ( IO, hSetEncoding, stdin, utf8 )
+import Text.Show          ( Show )
 
 -- base-unicode-symbols ----------------
 
 import Data.Eq.Unicode        ( (≡) )
 import Data.Function.Unicode  ( (∘) )
-import Data.Monoid.Unicode    ( (⊕) )
-import Prelude.Unicode        ( ℚ, ℤ )
+import Prelude.Unicode        ( ℤ )
 
 -- data-textual ------------------------
 
-import Data.Textual             ( Printable( print ) , Textual( textual ) )
-import Data.Textual.Fractional  ( Optional( Optional ), decExpSign, fractional'
-                                , optSign )
-import Data.Textual.Integral    ( Decimal( Decimal ) )
+import Data.Textual  ( Printable( print ) )
 
 -- duration ----------------------------
 
@@ -66,7 +59,6 @@ import FPath.File              ( File )
 
 -- lens --------------------------------
 
-import Control.Lens.Lens    ( Lens', lens )
 import Control.Lens.Prism   ( Prism', prism' )
 
 -- monaderror-io -----------------------
@@ -80,35 +72,14 @@ import MonadIO  ( MonadIO, liftIO, say, warn )
 
 -- more-unicode ------------------------
 
-import Data.MoreUnicode.Applicative  ( (⊵), (⋫), (∤) )
-import Data.MoreUnicode.Functor      ( (⊳) )
-import Data.MoreUnicode.Lens         ( (⊣), (⫥) )
-import Data.MoreUnicode.Monoid       ( ф, ю )
-import Data.MoreUnicode.Natural      ( ℕ )
-import Data.MoreUnicode.Tasty        ( (≟) )
+import Data.MoreUnicode.Functor  ( (⊳) )
+import Data.MoreUnicode.Lens     ( (⊣), (⫥) )
+import Data.MoreUnicode.Natural  ( ℕ )
+import Data.MoreUnicode.Tasty    ( (≟) )
 
 -- mtl ---------------------------------
 
 import Control.Monad.Except  ( MonadError, throwError )
-
--- optparse-plus -----------------------
-
-import OptParsePlus  ( argT, optT )
-
--- options-applicative -----------------
-
-import Options.Applicative  ( ArgumentFields, Mod, Parser, ReadM
-                            , action, eitherReader, long, metavar, option
-                            , optional, pure, short, value
-                            )
-
--- parsec ------------------------------
-
-import Text.Parsec.Prim  ( ParsecT, Stream, parse )
-
--- parsers -----------------------------
-
-import Text.Parser.Char  ( anyChar, char )
 
 -- parsec-plus -------------------------
 
@@ -129,12 +100,8 @@ import TastyPlus  ( runTestsP, runTestsReplay, runTestTree )
 
 -- text --------------------------------
 
-import Data.Text     ( Text, isInfixOf, pack )
+import Data.Text     ( Text, isInfixOf )
 import Data.Text.IO  ( hGetContents )
-
--- text-printer ------------------------
-
-import qualified  Text.Printer  as  P
 
 -- tfmt --------------------------------
 
@@ -144,86 +111,17 @@ import Text.Fmt  ( fmt, fmtT )
 --                     local imports                      --
 ------------------------------------------------------------
 
-import SRT.Shifty          ( Shifty( shift ) )
-import SRT.Skew            ( Skew( MS_S, Skew ), to_ms_s )
-import SRT.SRTSequence     ( SRTSequence, find )
-import SRT.SRTTimeStamp    ( SRTTimeStamp( unSRTTimeStamp ) )
-import SRT.SRTTiming       ( SRTTiming( SRTTiming ) )
+import SRT.SRTAdjust.Options  ( AdjustmentOpts( AdjDelOff, AdjMarkers )
+                              , Marker
+                              , adj, infns, mtext, parseOptions, position
+                              )
+import SRT.Shifty             ( Shifty( shift ) )
+import SRT.Skew               ( Skew( MS_S, Skew ), to_ms_s )
+import SRT.SRTSequence        ( SRTSequence, find )
+import SRT.SRTTimeStamp       ( SRTTimeStamp( unSRTTimeStamp ) )
+import SRT.SRTTiming          ( SRTTiming( SRTTiming ) )
 
 --------------------------------------------------------------------------------
-
-------------------------------------------------------------
---                        Options                         --
-------------------------------------------------------------
-
-data RunTests = NoRunTests | RunTests
-
-data Marker = Marker { _position ∷ SRTTimeStamp, _mtext ∷ Text }
-  deriving (Eq,Show)
-
-mtext ∷ Lens' Marker Text
-mtext = lens _mtext (\ m t → m { _mtext = t })
-
-position ∷ Lens' Marker SRTTimeStamp
-position = lens _position (\ m p → m { _position = p })
-
-instance Printable Marker where
-  print (Marker pos txt) = P.text $ [fmt|%T=%t|] pos txt
-
-instance Printable (Maybe Marker) where
-  print (Just m) = print m
-  print Nothing  = P.text "--"
-
-instance Textual Marker where
-  textual = Marker ⊳ textual ⊵ char '=' ⋫ (pack ⊳ many anyChar)
-
-data AdjustmentOpts = AdjDelOff  { _d ∷ Skew  , _o ∷ Duration }
-                    | AdjMarkers { _m1 ∷ Marker, _m2 ∷ Maybe Marker }
-
-data Options = Options { _infns   ∷ [File]
-                       , _adj ∷ AdjustmentOpts
-                       }
-
-infns ∷ Lens' Options [File]
-infns = lens _infns (\ o is → o { _infns = is })
-
-adj ∷ Lens' Options AdjustmentOpts
-adj = lens _adj (\ o a → o { _adj = a })
-
-parseMarkers ∷ Parser AdjustmentOpts
-parseMarkers = let parseMarker ∷ Parser Marker
-                   parseMarker =
---                     option readT (long "marker" ⊕ short 'm'
-                     optT (long "marker" ⊕ short 'm' ⊕ metavar "TIMESTAMP=TEXT")
-
-                in AdjMarkers ⊳ parseMarker ⊵ optional parseMarker
-
-parseDelOff ∷ Parser AdjustmentOpts
-parseDelOff = let parseOffset ∷ Parser Duration
-                  parseOffset = optT (short 'f' ⊕ long "offset"
-                                                ⊕ metavar "OFFSET" ⊕ value 0)
-
-                  -- parse a decimal value, with optional leading +/-, and
-                  -- optional value in front of the decimal point (i.e.,
-                  -- +2, -0.2, 0.2, .2 are all valid)
-                  decimal ∷ Stream σ η Char ⇒ ParsecT σ ν η ℚ
-                  decimal = fractional' optSign Decimal Optional
-                                        (char '.' ⋫ pure ()) decExpSign
-                  readSkew ∷ ReadM Skew
-                  readSkew =
-                      eitherReader $ bimap show MS_S ⊳ parse decimal "cmdline"
-                  parseSkew ∷ Parser Skew
-                  parseSkew = option readSkew
-                                      (ю [ short 's', long "skew"
-                                         , metavar "SKEW", value (MS_S 0) ])
-               in AdjDelOff ⊳ parseSkew ⊵ parseOffset
-
-
-parseOptions ∷ Parser Options
-parseOptions = Options ⊳ many (parseFile ф) ⊵ (parseMarkers ∤ parseDelOff)
-
-parseFile ∷ Mod ArgumentFields File → Parser File
-parseFile ms = argT (action "file" ⊕ metavar "FILE" ⊕ ms)
 
 ------------------------------------------------------------
 
@@ -405,53 +303,6 @@ two = 2
 
 three ∷ ℤ
 three = 3
-
--- srtTimestamp ∷ Text
--- srtTimestamp = "01:20:34,567"
-
--- srtTimestampRef ∷ SRTTimeStamp
--- srtTimestampRef = SRTTimeStamp (MS 4834_567)
-
---------------------
-
--- srtTiming ∷ Text
--- srtTiming = "00:00:01,000 --> 00:00:04,074"
-
--- srtTimingRef ∷ SRTTiming
--- srtTimingRef = SRTTiming 1_000 4_074
-
---------------------
-
--- srtSubtitleText ∷ Text
--- srtSubtitleText = unlines
---   [ "Subtitles downloaded from www.OpenSubtitles.org"
---   , "Deklan, that's enough."
---   ]
-
--- srtSubtitleTextRef ∷ SRTSubtitleText
--- srtSubtitleTextRef =
---   SRTSubtitleText $ unlines [ "Subtitles downloaded from www.OpenSubtitles.org"
---                             , "Deklan, that's enough." ]
---------------------
-
--- srtSubtitle ∷ Text
--- srtSubtitle = unlines
---   [ "1"
---   , "00:00:01,000 --> 00:00:04,074\r"
---   , "Subtitles downloaded from www.OpenSubtitles.org\r"
---   ]
-
--- srtSubtitleRef ∷ SRTSubtitle
--- srtSubtitleRef =
---   let expectText =
---         SRTSubtitleText $
---             unlines [ "Subtitles downloaded from www.OpenSubtitles.org" ]
---       expectTimeStampBegin = 1_000
---       expectTimeStampEnd   = 4_074
---       expectTiming = SRTTiming expectTimeStampBegin expectTimeStampEnd
---    in SRTSubtitle 1 expectTiming expectText
-
---------------------
 
 ----------------------------------------
 
