@@ -49,7 +49,8 @@ cabal-version:       >=1.10
 library
   ghc-options:        -W -Wall -fhelpful-errors
   -- Modules exported by the library.
-  exposed-modules:    SRT.Skew
+  exposed-modules:    SRT.Shifty
+                    , SRT.Skew
                     , SRT.SRTSequence
                     , SRT.SRTSubtitle
                     , SRT.SRTSubtitleText
@@ -59,8 +60,7 @@ library
                     , SRT.T.Tests
 
   -- modules included in this library but not exported.
-  other-modules:      SRT.Shifty
-                    , SRT.TFunctor
+  other-modules:      SRT.TFunctor
 
 
   default-extensions: NoImplicitPrelude
@@ -98,10 +98,11 @@ executable srt-adjust
   main-is:             srt-adjust.hs
   hs-source-dirs:      bin
   build-depends:       base, base-unicode-symbols, data-textual, lens
-                     , mono-traversable, mtl, optparse-applicative, parsec
-                     , parsers, QuickCheck, tasty, tasty-hunit, tasty-quickcheck
+                     , mtl, optparse-applicative, parsec
+                     , parsers, tasty, tasty-hunit
                      , text, text-printer
 
+                     , duration
                      , exited               >= 1.0.2.0
                      , fluffy               >= 0.2.13.2
                      , fpath                >= 1.0.3.1

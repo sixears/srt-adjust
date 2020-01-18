@@ -7,7 +7,7 @@
 {-# LANGUAGE UnicodeSyntax      #-}
 
 module SRT.SRTSequence
-  ( tests )
+  ( SRTSequence, find, tests )
 where
 
 -- base --------------------------------

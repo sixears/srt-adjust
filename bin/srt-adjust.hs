@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE FlexibleInstances     #-}
--- {-# LANGUAGE InstanceSigs          #-}
+{-# LANGUAGE InstanceSigs          #-}
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NoImplicitPrelude     #-}
@@ -17,15 +17,12 @@ import Prelude  ( Fractional( (/) ), Int, Num( (+), (-), (*) ), (/), floor )
 
 -- base --------------------------------
 
-import qualified  Data.List
-
 import Control.Applicative  ( many )
 import Control.Exception    ( Exception )
 import Control.Monad        ( forM_, return, when )
 import Data.Bifunctor       ( bimap )
-import Data.Bool            ( Bool )
 import Data.Char            ( Char )
-import Data.Either          ( Either( Left, Right ) )
+import Data.Either          ( Either( Right ) )
 import Data.Eq              ( Eq )
 import Data.Function        ( ($) )
 import Data.Maybe           ( Maybe( Just, Nothing ) )
@@ -36,17 +33,14 @@ import Text.Show            ( Show( show ) )
 
 -- base-unicode-symbols ----------------
 
-import Data.Eq.Unicode        ( (≡), (≢) )
+import Data.Eq.Unicode        ( (≡) )
 import Data.Function.Unicode  ( (∘) )
 import Data.Monoid.Unicode    ( (⊕) )
 import Prelude.Unicode        ( ℚ, ℤ )
 
 -- data-textual ------------------------
 
-import Data.Textual             ( Parsed( Malformed, Parsed )
-                                , Printable( print ) , Textual( textual )
-                                , fromText, parseText, toText
-                                )
+import Data.Textual             ( Printable( print ) , Textual( textual ) )
 import Data.Textual.Fractional  ( Optional( Optional ), decExpSign, fractional'
                                 , optSign )
 import Data.Textual.Integral    ( Decimal( Decimal ) )
@@ -72,7 +66,6 @@ import FPath.File              ( File )
 
 -- lens --------------------------------
 
-import Control.Lens.Getter  ( view )
 import Control.Lens.Lens    ( Lens', lens )
 import Control.Lens.Prism   ( Prism', prism' )
 
@@ -84,10 +77,6 @@ import MonadError.IO.Error  ( AsIOError( _IOError ), IOError, userE )
 -- monadio-plus ------------------------
 
 import MonadIO  ( MonadIO, liftIO, say, warn )
-
--- mono-traversable --------------------
-
-import Data.MonoTraversable  ( Element, MonoFunctor( omap ) )
 
 -- more-unicode ------------------------
 
@@ -119,18 +108,12 @@ import Text.Parsec.Prim  ( ParsecT, Stream, parse )
 
 -- parsers -----------------------------
 
-import Text.Parser.Char         ( anyChar, char, string )
-import Text.Parser.Combinators  ( sepEndBy, skipOptional )
+import Text.Parser.Char  ( anyChar, char )
 
 -- parsec-plus -------------------------
 
 import ParsecPlus  ( AsParseError( _ParseError ), IOParseError, ParseError )
-import ParsecPlus  ( Parsecable( parsec, parser ), parsecFileUTF8 )
-
--- QuickCheck --------------------------
-
-import Test.QuickCheck.Arbitrary ( Arbitrary( arbitrary ) )
-import Test.QuickCheck.Gen       ( listOf )
+import ParsecPlus  ( Parsecable( parsec ), parsecFileUTF8 )
 
 -- tasty -------------------------------
 
@@ -142,17 +125,12 @@ import Test.Tasty.HUnit  ( testCase )
 
 -- tasty-plus --------------------------
 
-import TastyPlus  ( assertListEqR, assertListEq, propInvertibleText, runTestsP
-                  , runTestsReplay, runTestTree )
-
--- tasty-quickcheck --------------------
-
-import Test.Tasty.QuickCheck  ( testProperty )
+import TastyPlus  ( runTestsP, runTestsReplay, runTestTree )
 
 -- text --------------------------------
 
-import Data.Text     ( Text, filter, intercalate, isInfixOf, pack, unlines )
-import qualified  Data.Text.IO  as  TextIO
+import Data.Text     ( Text, isInfixOf, pack )
+import Data.Text.IO  ( hGetContents )
 
 -- text-printer ------------------------
 
@@ -166,14 +144,9 @@ import Text.Fmt  ( fmt, fmtT )
 --                     local imports                      --
 ------------------------------------------------------------
 
-import SRT.ParserHelp      ( nl )
 import SRT.Shifty          ( Shifty( shift ) )
-import SRT.TFunctor        ( TFunctor( tmap ) )
-
 import SRT.Skew            ( Skew( MS_S, Skew ), to_ms_s )
-import SRT.SRTSubtitle     ( SRTSubtitle( SRTSubtitle ), subtitle, timing )
-import SRT.SRTSubtitleText ( SRTSubtitleText( SRTSubtitleText
-                                            , unSRTSubtitleText ) )
+import SRT.SRTSequence     ( SRTSequence, find )
 import SRT.SRTTimeStamp    ( SRTTimeStamp( unSRTTimeStamp ) )
 import SRT.SRTTiming       ( SRTTiming( SRTTiming ) )
 
@@ -249,45 +222,6 @@ parseDelOff = let parseOffset ∷ Parser Duration
 parseOptions ∷ Parser Options
 parseOptions = Options ⊳ many (parseFile ф) ⊵ (parseMarkers ∤ parseDelOff)
 
-{-
-class PrintOut σ where
-  toP ∷ Printable ρ ⇒ ρ → σ
-
-parseTextual ∷ ∀ β τ α .
-      (Textual β, PrintOut τ, Printable α, Typeable β) ⇒
-      α → Either τ β
-parseTextual (toText → z) =
-  let fromParsed (Parsed a)      = a
-      -- this function exists solely to provide a hypothetical value to reflect
-      -- on
-      fromParsed (Malformed _ _) = error "this should never be evaluated"
-      parsedZ                    = parseText z
-      typ                        = typeOf $ fromParsed parsedZ
-   in case parsedZ of
-        Parsed a       → Right a
-        Malformed [] x → Left ∘ toP $
-                           [fmtT|failed to parse '%t' as '%w': %s|] z typ x
-        Malformed xs x → let msg = [fmtT|failed to parse '%t' as '%w': [%L] %s|]
-                                   z typ xs x
-                          in Left (toP msg)
-
-instance PrintOut Text where
-  toP = toText
-
-instance PrintOut String where
-  toP = toString
-
-readS ∷ (Textual α, Typeable α) ⇒ ReadM α
-readS = eitherReader parseTextual
-
-argS ∷ (Textual α, Typeable α) ⇒ Mod ArgumentFields α → Parser α
-argS = argument readS
-
-optS ∷ (Textual α, Typeable α) ⇒ Mod OptionFields α → Parser α
-optS = option readS
-
--}
-
 parseFile ∷ Mod ArgumentFields File → Parser File
 parseFile ms = argT (action "file" ⊕ metavar "FILE" ⊕ ms)
 
@@ -321,7 +255,7 @@ pf__ mf = case mf of
 -- EMBED THIS INTO PARSECFILEUTF8
            Nothing → do -- MAKE THIS GETUTF8CONTENTS
                         liftIO $ hSetEncoding stdin utf8
-                        txt ← liftIO $ TextIO.hGetContents stdin
+                        txt ← liftIO $ hGetContents stdin
                         parsec ("stdin" ∷ Text) txt
 
 ------------------------------------------------------------
@@ -359,8 +293,8 @@ instance Printable FPathIOParseError where
 ------------------------------------------------------------
 
 optionsAdjust ∷ (AsIOError ε, MonadError ε η) ⇒
-               SRTSequence → Maybe File → AdjustmentOpts
-             → η (Skew, Duration)
+                SRTSequence → Maybe File → AdjustmentOpts
+              → η (Skew, Duration)
 optionsAdjust _ _ (AdjDelOff  d  o)  = return (d,o)
 optionsAdjust seq fn (AdjMarkers m1 (Just m2)) = do
   (SRTTiming t1 _) ← findMarker m1 seq fn
@@ -522,7 +456,7 @@ three = 3
 ----------------------------------------
 
 tests ∷ TestTree
-tests = testGroup "srt-adjust" [ srtSequenceTests, optionsAdjustTests ]
+tests = testGroup "srt-adjust" [ optionsAdjustTests ]
 
 ----------------------------------------
 
