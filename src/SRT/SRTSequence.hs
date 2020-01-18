@@ -57,9 +57,12 @@ import Data.MoreUnicode.Tasty        ( (≟) )
 import ParsecPlus  ( ParseError )
 import ParsecPlus  ( Parsecable( parsec, parser ) )
 
+-- parser-plus -------------------------
+
+import ParserPlus  ( nl, utf8BOM )
+
 -- parsers -----------------------------
 
-import Text.Parser.Char         ( string )
 import Text.Parser.Combinators  ( sepEndBy, skipOptional )
 
 -- QuickCheck --------------------------
@@ -97,7 +100,6 @@ import qualified  Text.Printer  as  P
 ------------------------------------------------------------
 
 import Duration             ( Duration( MS ) )
-import SRT.ParserHelp       ( nl )
 import SRT.Shifty           ( Shifty( shift ) )
 import SRT.Skew             ( Skew( MS_S ) )
 import SRT.SRTSubtitle      ( SRTSubtitle( SRTSubtitle ), subtitle, timing )
@@ -129,7 +131,7 @@ instance Printable SRTSequence where
 
 instance Textual SRTSequence where
   textual = SRTSequence ⊳
-              (skipOptional (string "\65279") ⋫ (textual `sepEndBy` nl))
+              (skipOptional utf8BOM ⋫ (textual `sepEndBy` nl))
 
 instance Parsecable SRTSequence where
   parser = textual

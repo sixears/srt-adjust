@@ -45,6 +45,10 @@ import Data.MoreUnicode.Tasty        ( (≟) )
 
 import ParsecPlus  ( Parsecable( parsec, parser ), ParseError )
 
+-- parser-plus -------------------------
+
+import ParserPlus  ( nl, whitespaces )
+
 -- parsers -----------------------------
 
 import Text.Parser.Char  ( noneOf )
@@ -83,8 +87,7 @@ import qualified  Text.Printer  as  P
 --                     local imports                      --
 ------------------------------------------------------------
 
-import SRT.ParserHelp  ( nl, whitespaces )
-import SRT.TFunctor    ( TFunctor( tmap ) )
+import SRT.TFunctor  ( TFunctor( tmap ) )
 
 --------------------------------------------------------------------------------
 

@@ -54,6 +54,10 @@ import Data.MoreUnicode.Tasty        ( (≟) )
 import ParsecPlus  ( ParseError )
 import ParsecPlus  ( Parsecable( parsec, parser ) )
 
+-- parser-plus -------------------------
+
+import ParserPlus  ( nl, whitespaces )
+
 -- QuickCheck --------------------------
 
 import Test.QuickCheck.Arbitrary ( Arbitrary( arbitrary ) )
@@ -86,7 +90,6 @@ import qualified  Text.Printer  as  P
 --                     local imports                      --
 ------------------------------------------------------------
 
-import SRT.ParserHelp       ( nl, whitespaces )
 import SRT.Shifty           ( Shifty( shift ) )
 import SRT.SRTSubtitleText  ( SRTSubtitleText( SRTSubtitleText ) )
 import SRT.SRTTiming        ( SRTTiming( SRTTiming ) )
