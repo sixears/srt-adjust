@@ -1,12 +1,15 @@
--- {-# LANGUAGE FlexibleContexts      #-}
--- {-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE InstanceSigs          #-}
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NoImplicitPrelude     #-}
+{-# LANGUAGE NumericUnderscores    #-}
 {-# LANGUAGE OverloadedStrings     #-}
--- {-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE QuasiQuotes           #-}
+{-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE UnicodeSyntax         #-}
+
+{-# LANGUAGE RankNTypes          #-}
 
 -- TODO:
 -- split out components
@@ -25,14 +28,13 @@ import Data.Function      ( ($) )
 import Data.Maybe         ( Maybe( Just, Nothing ) )
 import Data.String        ( String )
 import System.Exit        ( ExitCode( ExitSuccess ) )
-import System.IO          ( IO, hSetEncoding, stdin, utf8 )
+import System.IO          ( IO )
 import Text.Show          ( Show )
 
 -- base-unicode-symbols ----------------
 
 import Data.Eq.Unicode        ( (≡) )
 import Data.Function.Unicode  ( (∘) )
-import Prelude.Unicode        ( ℤ )
 
 -- data-textual ------------------------
 
@@ -63,17 +65,18 @@ import Control.Lens.Prism   ( Prism', prism' )
 
 -- monaderror-io -----------------------
 
-import MonadError           ( ѥ )
 import MonadError.IO.Error  ( AsIOError( _IOError ), IOError, userE )
 
 -- monadio-plus ------------------------
 
-import MonadIO  ( MonadIO, liftIO, say, warn )
+import MonadIO       ( MonadIO, say, warn )
+import MonadIO.File  ( getContentsUTF8 )
 
 -- more-unicode ------------------------
 
 import Data.MoreUnicode.Functor  ( (⊳) )
 import Data.MoreUnicode.Lens     ( (⊣), (⫥) )
+import Data.MoreUnicode.Monad    ( (≫) )
 import Data.MoreUnicode.Natural  ( ℕ )
 import Data.MoreUnicode.Tasty    ( (≟) )
 
@@ -83,8 +86,10 @@ import Control.Monad.Except  ( MonadError, throwError )
 
 -- parsec-plus -------------------------
 
-import ParsecPlus  ( AsParseError( _ParseError ), IOParseError, ParseError )
-import ParsecPlus  ( Parsecable( parsec ), parsecFileUTF8 )
+import qualified  ParsecPlus
+
+import ParsecPlus  ( AsParseError( _ParseError ), ParseError )
+import ParsecPlus  ( Parsecable( parsec ) )
 
 -- tasty -------------------------------
 
@@ -100,8 +105,7 @@ import TastyPlus  ( runTestsP, runTestsReplay, runTestTree )
 
 -- text --------------------------------
 
-import Data.Text     ( Text, isInfixOf )
-import Data.Text.IO  ( hGetContents )
+import Data.Text  ( Text, isInfixOf )
 
 -- tfmt --------------------------------
 
@@ -128,33 +132,13 @@ import SRT.SRTTiming          ( SRTTiming( SRTTiming ) )
 -- factor out run, etc. (to ProcLib?)
 -- make ProcLib Errors to be Exceptions
 
-pf ∷ File → IO (Either IOParseError SRTSequence)
-pf f = ѥ (parsecFileUTF8 f)
-
-pf' ∷ (MonadIO μ, MonadError IOParseError η) ⇒ File → μ (η SRTSequence)
-pf' f = ѥ (parsecFileUTF8 f)
-
-pf'' ∷ (MonadIO μ, AsParseError ε, AsIOError ε, MonadError ε η, Parsecable α) ⇒
-       File → μ (η α)
-pf'' f = ѥ (parsecFileUTF8 f)
-
-pf''' ∷ (MonadIO μ, AsParseError ε, AsIOError ε, MonadError ε μ, Parsecable α) ⇒
-        File → μ α
-pf''' f = parsecFileUTF8 f
-
-pf_ ∷ (MonadIO μ, AsParseError ε, AsIOError ε, MonadError ε μ) ⇒
-      File → μ SRTSequence
-pf_ f = parsecFileUTF8 f
-
-pf__ ∷ (MonadIO μ, AsParseError ε, AsIOError ε, MonadError ε μ) ⇒
-        Maybe File → μ SRTSequence
-pf__ mf = case mf of
-           Just f  → parsecFileUTF8 f
--- EMBED THIS INTO PARSECFILEUTF8
-           Nothing → do -- MAKE THIS GETUTF8CONTENTS
-                        liftIO $ hSetEncoding stdin utf8
-                        txt ← liftIO $ hGetContents stdin
-                        parsec ("stdin" ∷ Text) txt
+{- | Parse a file whose contents are UTF8-encoded text; `Nothing` causes a parse
+     of stdin. -}
+parsecFUTF8 ∷ ∀ χ ε μ . (MonadIO μ, Parsecable χ,
+                         AsIOError ε, AsParseError ε, MonadError ε μ) ⇒
+              Maybe File → μ χ
+parsecFUTF8 Nothing   = getContentsUTF8 ≫ parsec ("stdin" ∷ Text)
+parsecFUTF8 (Just fn) = ParsecPlus.parsecFileUTF8 fn
 
 ------------------------------------------------------------
 
@@ -270,10 +254,10 @@ main = doMain @FPathIOParseError $ do
               xs → Just ⊳ xs
 
   forM_ fns $ \ fn → do
-    seq ← pf__ fn
+--    seq ← pf__ fn
+    seq ← parsecFUTF8 fn
 
     (del,off) ← optionsAdjust seq fn $ opts ⊣ adj
-      -- ADD MODE TO SHOW CALC BUT DO NOTHING
     let MS off_ms = off
     warn $ [fmtT|Using offset %dms, delay %fms/s|] (floor @_ @Int off_ms)
                                                    (to_ms_s del)
@@ -297,14 +281,6 @@ findMarker m seq fn =
 --------------------------------------------------------------------------------
 --                                   tests                                    --
 --------------------------------------------------------------------------------
-
-two ∷ ℤ
-two = 2
-
-three ∷ ℤ
-three = 3
-
-----------------------------------------
 
 tests ∷ TestTree
 tests = testGroup "srt-adjust" [ optionsAdjustTests ]
