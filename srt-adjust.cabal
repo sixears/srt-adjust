@@ -87,7 +87,7 @@ library
                      , non-empty-containers >= 1.3.0.0
                      , number               >= 1.1.2.0
                      , optparse-plus        >= 1.0.1.0
-                     , parsec-plus          >= 1.0.1.0
+                     , parsec-plus          >= 1.0.2.0
                      , parser-plus          >= 1.0.1.0
                      , tasty-plus           >= 1.1.0.0
                      , tfmt                 >= 0.2.2.0
@@ -107,10 +107,7 @@ executable srt-adjust
   -- add ?RTS -xt -hy to produce a usage graph
   main-is:             srt-adjust.hs
   hs-source-dirs:      bin
-  build-depends:       base, base-unicode-symbols, data-textual, lens
-                     , mtl
-                     , tasty, tasty-hunit
-                     , text
+  build-depends:       base, base-unicode-symbols, mtl, tasty, tasty-hunit, text
 
                      , duration
                      , exited

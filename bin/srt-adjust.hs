@@ -1,15 +1,9 @@
-{-# LANGUAGE FlexibleContexts      #-}
-{-# LANGUAGE InstanceSigs          #-}
-{-# LANGUAGE LambdaCase            #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NoImplicitPrelude     #-}
 {-# LANGUAGE NumericUnderscores    #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE QuasiQuotes           #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# LANGUAGE UnicodeSyntax         #-}
-
-{-# LANGUAGE RankNTypes          #-}
 
 -- TODO:
 -- split out components
@@ -20,25 +14,18 @@ import Prelude  ( Fractional( (/) ), Int, Num( (+), (-), (*) ), (/), floor )
 
 -- base --------------------------------
 
-import Control.Exception  ( Exception )
-import Control.Monad      ( forM_, return, when )
-import Data.Either        ( Either( Right ) )
-import Data.Eq            ( Eq )
-import Data.Function      ( ($) )
-import Data.Maybe         ( Maybe( Just, Nothing ) )
-import Data.String        ( String )
-import System.Exit        ( ExitCode( ExitSuccess ) )
-import System.IO          ( IO )
-import Text.Show          ( Show )
+import Control.Monad  ( forM_, return, when )
+import Data.Either    ( Either( Right ) )
+import Data.Function  ( ($) )
+import Data.Maybe     ( Maybe( Just, Nothing ) )
+import Data.String    ( String )
+import System.Exit    ( ExitCode( ExitSuccess ) )
+import System.IO      ( IO )
 
 -- base-unicode-symbols ----------------
 
 import Data.Eq.Unicode        ( (≡) )
 import Data.Function.Unicode  ( (∘) )
-
--- data-textual ------------------------
-
-import Data.Textual  ( Printable( print ) )
 
 -- duration ----------------------------
 
@@ -54,29 +41,21 @@ import Fluffy.Options  ( parseOpts )
 
 -- fpath -------------------------------
 
-import FPath.AsFilePath        ( filepath )
-import FPath.Error.FPathError  ( AsFPathError( _FPathError ), FPathError
-                               , FPathIOError, _FPIO_IO_ERROR,_FPIO_PATH_ERROR )
-import FPath.File              ( File )
-
--- lens --------------------------------
-
-import Control.Lens.Prism   ( Prism', prism' )
+import FPath.AsFilePath  ( filepath )
+import FPath.File        ( File )
 
 -- monaderror-io -----------------------
 
-import MonadError.IO.Error  ( AsIOError( _IOError ), IOError, userE )
+import MonadError.IO.Error  ( AsIOError, IOError, userE )
 
 -- monadio-plus ------------------------
 
-import MonadIO       ( MonadIO, say, warn )
-import MonadIO.File  ( getContentsUTF8 )
+import MonadIO  ( say, warn )
 
 -- more-unicode ------------------------
 
 import Data.MoreUnicode.Functor  ( (⊳) )
 import Data.MoreUnicode.Lens     ( (⊣), (⫥) )
-import Data.MoreUnicode.Monad    ( (≫) )
 import Data.MoreUnicode.Natural  ( ℕ )
 import Data.MoreUnicode.Tasty    ( (≟) )
 
@@ -86,10 +65,8 @@ import Control.Monad.Except  ( MonadError, throwError )
 
 -- parsec-plus -------------------------
 
-import qualified  ParsecPlus
-
-import ParsecPlus  ( AsParseError( _ParseError ), ParseError )
-import ParsecPlus  ( Parsecable( parsec ) )
+import Parsec.FPathParseError  ( FPathIOParseError )
+import ParsecPlus              ( parsecFUTF8  )
 
 -- tasty -------------------------------
 
@@ -105,7 +82,7 @@ import TastyPlus  ( runTestsP, runTestsReplay, runTestTree )
 
 -- text --------------------------------
 
-import Data.Text  ( Text, isInfixOf )
+import Data.Text  ( isInfixOf )
 
 -- tfmt --------------------------------
 
@@ -132,45 +109,7 @@ import SRT.SRTTiming          ( SRTTiming( SRTTiming ) )
 -- factor out run, etc. (to ProcLib?)
 -- make ProcLib Errors to be Exceptions
 
-{- | Parse a file whose contents are UTF8-encoded text; `Nothing` causes a parse
-     of stdin. -}
-parsecFUTF8 ∷ ∀ χ ε μ . (MonadIO μ, Parsecable χ,
-                         AsIOError ε, AsParseError ε, MonadError ε μ) ⇒
-              Maybe File → μ χ
-parsecFUTF8 Nothing   = getContentsUTF8 ≫ parsec ("stdin" ∷ Text)
-parsecFUTF8 (Just fn) = ParsecPlus.parsecFileUTF8 fn
-
 ------------------------------------------------------------
-
-data FPathIOParseError = FPIOP_FPATHIOERROR FPathIOError
-                       | FPIOP_PARSEERROR   ParseError
-  deriving (Eq, Show)
-
-_FPIOP_FPATHIOERROR ∷ Prism' FPathIOParseError FPathIOError
-_FPIOP_FPATHIOERROR = prism' (\ e → FPIOP_FPATHIOERROR e)
-                             (\ case FPIOP_FPATHIOERROR e → Just e; _ → Nothing)
-
-_FPIOP_PARSEERROR ∷ Prism' FPathIOParseError ParseError
-_FPIOP_PARSEERROR = prism' (\ e → FPIOP_PARSEERROR e)
-                           (\ case FPIOP_PARSEERROR e → Just e; _ → Nothing)
-
-instance Exception FPathIOParseError
-
-instance AsIOError FPathIOParseError where
-  _IOError = _FPIOP_FPATHIOERROR ∘ _FPIO_IO_ERROR
-
-instance AsFPathError FPathIOParseError where
-  _FPathError ∷ Prism' FPathIOParseError FPathError
-  _FPathError = _FPIOP_FPATHIOERROR ∘ _FPIO_PATH_ERROR
-
-instance AsParseError FPathIOParseError where
-  _ParseError ∷ Prism' FPathIOParseError ParseError
-  _ParseError = prism' FPIOP_PARSEERROR
-                       (\ case FPIOP_PARSEERROR e → Just e; _ → Nothing)
-
-instance Printable FPathIOParseError where
-  print (FPIOP_FPATHIOERROR e) = print e
-  print (FPIOP_PARSEERROR   e) = print e
 
 ------------------------------------------------------------
 
