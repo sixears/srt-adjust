@@ -13,7 +13,7 @@ name:                srt-adjust
 version:             1.0.0.0
 
 -- A short (one-line) description of the package.
-synopsis:            manage info.yaml
+synopsis:            adjust SRT subtitle file timing
 
 -- A longer description of the package.
 -- description:
