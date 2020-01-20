@@ -28,7 +28,7 @@ import TastyPlus  ( runTestsP, runTestsReplay, runTestTree )
 --                     local imports                      --
 ------------------------------------------------------------
 
-import qualified  Duration
+import qualified  SRT.SRTAdjust
 import qualified  SRT.SRTTimeStamp
 import qualified  SRT.SRTTiming
 import qualified  SRT.SRTSequence
@@ -38,7 +38,7 @@ import qualified  SRT.SRTSubtitleText
 --------------------------------------------------------------------------------
 
 tests ∷ TestTree
-tests = testGroup "srt-adjust" [ Duration.tests
+tests = testGroup "srt-adjust" [ SRT.SRTAdjust.tests
                                , SRT.SRTTimeStamp.tests
                                , SRT.SRTTiming.tests
                                , SRT.SRTSequence.tests

@@ -2,11 +2,10 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE QuasiQuotes       #-}
 {-# LANGUAGE UnicodeSyntax     #-}
 
 module SRT.SRTAdjust.Options
-  ( AdjustmentOpts(..), Marker, adj, infns, mtext, parseOptions, position )
+  ( adj, infns, parseOptions )
 where
 
 -- base --------------------------------
@@ -14,9 +13,7 @@ where
 import Control.Applicative  ( many )
 import Data.Bifunctor       ( bimap )
 import Data.Char            ( Char )
-import Data.Eq              ( Eq )
 import Data.Function        ( ($) )
-import Data.Maybe           ( Maybe( Just, Nothing ) )
 import Text.Show            ( Show( show ) )
 
 -- base-unicode-symbols ----------------
@@ -26,7 +23,6 @@ import Prelude.Unicode      ( ℚ )
 
 -- data-textual ------------------------
 
-import Data.Textual             ( Printable( print ) , Textual( textual ) )
 import Data.Textual.Fractional  ( Optional( Optional ), decExpSign, fractional'
                                 , optSign )
 import Data.Textual.Integral    ( Decimal( Decimal ) )
@@ -66,54 +62,16 @@ import Text.Parsec.Prim  ( ParsecT, Stream, parse )
 
 -- parsers -----------------------------
 
-import Text.Parser.Char  ( anyChar, char )
-
--- text --------------------------------
-
-import Data.Text     ( Text, pack )
-
--- text-printer ------------------------
-
-import qualified  Text.Printer  as  P
-
--- tfmt --------------------------------
-
-import Text.Fmt  ( fmt )
+import Text.Parser.Char  ( char )
 
 ------------------------------------------------------------
 --                     local imports                      --
 ------------------------------------------------------------
 
-import SRT.Skew          ( Skew( MS_S ) )
-import SRT.SRTTimeStamp  ( SRTTimeStamp )
+import SRT.Skew             ( Skew( MS_S ) )
+import SRT.SRTAdjust.Types  ( AdjustmentOpts( AdjDelOff, AdjMarkers ), Marker )
 
 --------------------------------------------------------------------------------
-
-------------------------------------------------------------
---                        Options                         --
-------------------------------------------------------------
-
-data Marker = Marker { _position ∷ SRTTimeStamp, _mtext ∷ Text }
-  deriving (Eq,Show)
-
-mtext ∷ Lens' Marker Text
-mtext = lens _mtext (\ m t → m { _mtext = t })
-
-position ∷ Lens' Marker SRTTimeStamp
-position = lens _position (\ m p → m { _position = p })
-
-instance Printable Marker where
-  print (Marker pos txt) = P.text $ [fmt|%T=%t|] pos txt
-
-instance Printable (Maybe Marker) where
-  print (Just m) = print m
-  print Nothing  = P.text "--"
-
-instance Textual Marker where
-  textual = Marker ⊳ textual ⊵ char '=' ⋫ (pack ⊳ many anyChar)
-
-data AdjustmentOpts = AdjDelOff  { _d ∷ Skew  , _o ∷ Duration }
-                    | AdjMarkers { _m1 ∷ Marker, _m2 ∷ Maybe Marker }
 
 data Options = Options { _infns   ∷ [File]
                        , _adj ∷ AdjustmentOpts
@@ -128,7 +86,6 @@ adj = lens _adj (\ o a → o { _adj = a })
 parseMarkers ∷ Parser AdjustmentOpts
 parseMarkers = let parseMarker ∷ Parser Marker
                    parseMarker =
---                     option readT (long "marker" ⊕ short 'm'
                      optT (long "marker" ⊕ short 'm' ⊕ metavar "TIMESTAMP=TEXT")
 
                 in AdjMarkers ⊳ parseMarker ⊵ optional parseMarker

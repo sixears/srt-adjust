@@ -56,7 +56,9 @@ library
                     , SRT.SRTTimeStamp
                     , SRT.SRTTiming
 
+                    , SRT.SRTAdjust
                     , SRT.SRTAdjust.Options
+                    , SRT.SRTAdjust.Types
 
                     , SRT.Shifty
 
@@ -107,17 +109,14 @@ executable srt-adjust
   -- add ?RTS -xt -hy to produce a usage graph
   main-is:             srt-adjust.hs
   hs-source-dirs:      bin
-  build-depends:       base, base-unicode-symbols, mtl, tasty, tasty-hunit, text
+  build-depends:       base
 
                      , duration
                      , exited
                      , fluffy
-                     , fpath
-                     , monaderror-io
                      , monadio-plus
                      , more-unicode
                      , parsec-plus
-                     , tasty-plus
                      , tfmt
 
                      , srt-adjust
