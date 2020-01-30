@@ -19,6 +19,10 @@ import Data.Maybe     ( Maybe( Just, Nothing ) )
 import System.Exit    ( ExitCode( ExitSuccess ) )
 import System.IO      ( IO )
 
+-- base-unicode-symbols ----------------
+
+import Data.Function.Unicode  ( (∘) )
+
 -- duration ----------------------------
 
 import Duration  ( Duration( MS ) )
@@ -27,9 +31,9 @@ import Duration  ( Duration( MS ) )
 
 import Exited  ( doMain )
 
--- fluffy ------------------------------
+-- fpath -------------------------------
 
-import Fluffy.Options  ( parseOpts )
+import FPath.File  ( File( FileA ) )
 
 -- monadio-plus ------------------------
 
@@ -43,7 +47,7 @@ import Data.MoreUnicode.Lens     ( (⊣) )
 -- parsec-plus -------------------------
 
 import Parsec.FPathParseError  ( FPathIOParseError )
-import ParsecPlus              ( parsecFUTF8  )
+import ParsecPlus              ( parsecFUTF8L  )
 
 -- tfmt --------------------------------
 
@@ -54,7 +58,7 @@ import Text.Fmt  ( fmtT )
 ------------------------------------------------------------
 
 import SRT.SRTAdjust          ( optionsAdjust )
-import SRT.SRTAdjust.Options  ( adj, infns, parseOptions )
+import SRT.SRTAdjust.Options  ( adj, infns, optsParse )
 import SRT.Shifty             ( Shifty( shift ) )
 import SRT.Skew               ( to_ms_s )
 
@@ -62,14 +66,14 @@ import SRT.Skew               ( to_ms_s )
 
 main ∷ IO ()
 main = doMain @FPathIOParseError $ do
-  opts ← parseOpts Nothing "greet thee all" parseOptions
+  opts ← optsParse Nothing "greet thee all"
 
   let fns = case opts ⊣ infns of
               [] → [Nothing] -- read stdin
-              xs → Just ⊳ xs
+              xs → (Just ∘ FileA) ⊳ xs
 
   forM_ fns $ \ fn → do
-    seq ← parsecFUTF8 fn
+    seq ← parsecFUTF8L fn
 
     (del,off) ← optionsAdjust seq fn $ opts ⊣ adj
     let MS off_ms = off

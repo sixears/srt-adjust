@@ -1,19 +1,23 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE InstanceSigs      #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies      #-}
 {-# LANGUAGE UnicodeSyntax     #-}
 
 module SRT.SRTAdjust.Options
-  ( adj, infns, parseOptions )
+  ( adj, infns, optsParse )
 where
 
 -- base --------------------------------
 
 import Control.Applicative  ( many )
+import Control.Monad        ( return, sequence )
 import Data.Bifunctor       ( bimap )
 import Data.Char            ( Char )
 import Data.Function        ( ($) )
+import Data.Maybe           ( Maybe )
 import Text.Show            ( Show( show ) )
 
 -- base-unicode-symbols ----------------
@@ -33,28 +37,43 @@ import Duration  ( Duration )
 
 -- fpath -------------------------------
 
-import FPath.File  ( File )
+import FPath.AbsFile           ( AbsFile )
+import FPath.Error.FPathError  ( AsFPathError )
+import FPath.IO                ( pResolve )
 
 -- lens --------------------------------
 
 import Control.Lens.Lens    ( Lens', lens )
 
+-- monaderror-io -----------------------
+
+import MonadError.IO.Error  ( AsIOError )
+
+-- monadio-plus ------------------------
+
+import MonadIO  ( MonadIO )
+
 -- more-unicode ------------------------
 
 import Data.MoreUnicode.Applicative  ( (⊵), (⋫), (∤) )
 import Data.MoreUnicode.Functor      ( (⊳) )
+import Data.MoreUnicode.Monad        ( (≫) )
 import Data.MoreUnicode.Monoid       ( ф, ю )
+
+-- mtl ---------------------------------
+
+import Control.Monad.Except  ( MonadError )
 
 -- options-applicative -----------------
 
 import Options.Applicative  ( ArgumentFields, Mod, Parser, ReadM
                             , action, eitherReader, long, metavar, option
-                            , optional, pure, short, value
+                            , optional, pure, short, strArgument, value
                             )
 
 -- optparse-plus -----------------------
 
-import OptParsePlus  ( argT, optT )
+import OptParsePlus  ( optT, parseOpts )
 
 -- parsec ------------------------------
 
@@ -63,6 +82,10 @@ import Text.Parsec.Prim  ( ParsecT, Stream, parse )
 -- parsers -----------------------------
 
 import Text.Parser.Char  ( char )
+
+-- text --------------------------------
+
+import Data.Text  ( Text )
 
 ------------------------------------------------------------
 --                     local imports                      --
@@ -73,15 +96,15 @@ import SRT.SRTAdjust.Types  ( AdjustmentOpts( AdjDelOff, AdjMarkers ), Marker )
 
 --------------------------------------------------------------------------------
 
-data Options = Options { _infns   ∷ [File]
-                       , _adj ∷ AdjustmentOpts
-                       }
+class HasAdjustmentOpts α where
+  adj ∷ Lens' α AdjustmentOpts
 
-infns ∷ Lens' Options [File]
-infns = lens _infns (\ o is → o { _infns = is })
+data Options' = Options' { _infns' ∷ [Text]
+                         , _adj'   ∷ AdjustmentOpts
+                         }
 
-adj ∷ Lens' Options AdjustmentOpts
-adj = lens _adj (\ o a → o { _adj = a })
+instance HasAdjustmentOpts Options' where
+  adj = lens _adj' (\ o a → o { _adj' = a })
 
 parseMarkers ∷ Parser AdjustmentOpts
 parseMarkers = let parseMarker ∷ Parser Marker
@@ -111,10 +134,42 @@ parseDelOff = let parseOffset ∷ Parser Duration
                in AdjDelOff ⊳ parseSkew ⊵ parseOffset
 
 
-parseOptions ∷ Parser Options
-parseOptions = Options ⊳ many (parseFile ф) ⊵ (parseMarkers ∤ parseDelOff)
+parseOptions' ∷ Parser Options'
+parseOptions' = Options' ⊳ many (parseFile ф) ⊵ (parseMarkers ∤ parseDelOff)
 
-parseFile ∷ Mod ArgumentFields File → Parser File
-parseFile ms = argT (action "file" ⊕ metavar "FILE" ⊕ ms)
+parseFile ∷ Mod ArgumentFields Text → Parser Text
+parseFile ms = strArgument (action "file" ⊕ metavar "FILE" ⊕ ms)
+
+------------------------------------------------------------
+
+data Options = Options { _infns ∷ [AbsFile]
+                       , _adj   ∷ AdjustmentOpts
+                       }
+
+infns ∷ Lens' Options [AbsFile]
+infns = lens _infns (\ o is → o { _infns = is })
+
+instance HasAdjustmentOpts Options where
+  adj = lens _adj (\ o a → o { _adj = a })
+
+type family ResolvesTo α
+class Resolvable α where
+  resolve ∷ (MonadIO μ, AsFPathError ε, AsIOError ε, MonadError ε μ) ⇒
+            α → μ (ResolvesTo α)
+
+type instance ResolvesTo Text = AbsFile
+instance Resolvable Text where
+  resolve ∷ (MonadIO μ, AsFPathError ε, AsIOError ε, MonadError ε μ) ⇒
+            Text → μ AbsFile
+  resolve = pResolve
+
+type instance ResolvesTo Options' = Options
+instance Resolvable Options' where
+  resolve (Options' is' a) = do is ← sequence $ resolve ⊳ is'
+                                return $ Options is a
+
+optsParse ∷ (MonadIO μ, AsFPathError ε, AsIOError ε, MonadError ε μ) ⇒
+            Maybe Text → Text → μ Options
+optsParse progn descn = parseOpts progn descn parseOptions' ≫ resolve
 
 -- that's all, folks! ----------------------------------------------------------
