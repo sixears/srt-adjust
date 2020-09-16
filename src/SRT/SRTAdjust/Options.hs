@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wall #-}
+
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE InstanceSigs      #-}
@@ -64,7 +66,7 @@ import Data.MoreUnicode.Monoid       ( ф, ю )
 
 import Control.Monad.Except  ( MonadError )
 
--- options-applicative -----------------
+-- optparse-applicative ----------------
 
 import Options.Applicative  ( ArgumentFields, Mod, Parser, ReadM
                             , action, eitherReader, long, metavar, option
@@ -95,6 +97,19 @@ import SRT.Skew             ( Skew( MS_S ) )
 import SRT.SRTAdjust.Types  ( AdjustmentOpts( AdjDelOff, AdjMarkers ), Marker )
 
 --------------------------------------------------------------------------------
+
+type family ResolvesTo α
+class Resolvable α where
+  resolve ∷ (MonadIO μ, AsFPathError ε, AsIOError ε, MonadError ε μ) ⇒
+            α → μ (ResolvesTo α)
+
+type instance ResolvesTo Text = AbsFile
+instance Resolvable Text where
+  resolve ∷ (MonadIO μ, AsFPathError ε, AsIOError ε, MonadError ε μ) ⇒
+            Text → μ AbsFile
+  resolve = pResolve
+
+------------------------------------------------------------
 
 class HasAdjustmentOpts α where
   adj ∷ Lens' α AdjustmentOpts
@@ -151,17 +166,6 @@ infns = lens _infns (\ o is → o { _infns = is })
 
 instance HasAdjustmentOpts Options where
   adj = lens _adj (\ o a → o { _adj = a })
-
-type family ResolvesTo α
-class Resolvable α where
-  resolve ∷ (MonadIO μ, AsFPathError ε, AsIOError ε, MonadError ε μ) ⇒
-            α → μ (ResolvesTo α)
-
-type instance ResolvesTo Text = AbsFile
-instance Resolvable Text where
-  resolve ∷ (MonadIO μ, AsFPathError ε, AsIOError ε, MonadError ε μ) ⇒
-            Text → μ AbsFile
-  resolve = pResolve
 
 type instance ResolvesTo Options' = Options
 instance Resolvable Options' where

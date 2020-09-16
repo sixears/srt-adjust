@@ -39,7 +39,6 @@ import Data.MonoTraversable  ( Element, MonoFunctor( omap ) )
 import Data.MoreUnicode.Applicative  ( (⊵), (⋫) )
 import Data.MoreUnicode.Functor      ( (⊳) )
 import Data.MoreUnicode.Natural      ( ℕ )
-import Data.MoreUnicode.Tasty        ( (≟) )
 
 -- parsec-plus -------------------------
 
@@ -59,11 +58,12 @@ import Test.Tasty  ( TestTree, testGroup )
 
 -- tasty-hunit -------------------------
 
-import Test.Tasty.HUnit  ( testCase )
+import Test.Tasty.HUnit  ( (@=?), testCase )
 
 -- tasty-plus --------------------------
 
-import TastyPlus  ( propInvertibleText, runTestsP, runTestsReplay, runTestTree )
+import TastyPlus  ( (≟)
+                  , propInvertibleText, runTestsP, runTestsReplay, runTestTree )
 
 -- tasty-quickcheck --------------------
 
@@ -133,11 +133,11 @@ srtTimingRef = SRTTiming 1_000 4_074
 tests ∷ TestTree
 tests =
   testGroup "SRTTiming"
-            [ testCase "fromText" $ Just srtTimingRef ≟ fromText srtTiming
+            [ testCase "fromText" $ Just srtTimingRef @=? fromText srtTiming
             , testCase "toText"   $ srtTiming ≟ toText srtTimingRef
             , testCase "parsec"   $
                     Right (SRTTiming 1_000 4_074)
-                  ≟ parsec @SRTTiming @ParseError @(Either ParseError)
+                @=? parsec @SRTTiming @ParseError @(Either ParseError)
                            @Text @String "srtTimestamp" srtTiming
             , testProperty "invertibleText" (propInvertibleText @SRTTiming)
             , testCase "shift" $

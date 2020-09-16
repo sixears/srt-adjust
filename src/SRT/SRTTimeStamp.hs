@@ -61,7 +61,6 @@ import Data.MonoTraversable  ( Element, MonoFunctor( omap ) )
 import Data.MoreUnicode.Functor  ( (⊳) )
 import Data.MoreUnicode.Lens     ( (⫣), (⫥) )
 import Data.MoreUnicode.Natural  ( ℕ )
-import Data.MoreUnicode.Tasty    ( (≟) )
 
 -- number ------------------------------
 
@@ -82,11 +81,12 @@ import Test.Tasty  ( TestTree, testGroup )
 
 -- tasty-hunit -------------------------
 
-import Test.Tasty.HUnit  ( testCase )
+import Test.Tasty.HUnit  ( (@=?), testCase )
 
 -- tasty-plus --------------------------
 
-import TastyPlus  ( propInvertibleText, runTestsP, runTestsReplay, runTestTree )
+import TastyPlus  ( (≟)
+                  , propInvertibleText, runTestsP, runTestsReplay, runTestTree )
 
 -- tasty-quickcheck --------------------
 
@@ -199,14 +199,14 @@ tests =
                 , testCase "s1+s2"     $   "03:58:42,467" ≟ toText (s1 + s2)
                 , testCase "s2-s1"     $   "01:11:11,111" ≟ toText (s2 - s1)
                 , testCase "s1*2"      $   "03:58:42,467" ≟ toText (s1 + s2)
-                , testCase "quotRem" $ (4,3) ≟ (19 ∷ SRTTimeStamp) `quotRem` 4
-                , testCase "fromText"  $   Just srtTimestampRef
-                                         ≟ fromText srtTimestamp
+                , testCase "quotRem" $ (4,3) @=? (19 ∷ SRTTimeStamp) `quotRem` 4
+                , testCase "fromText"  $     Just srtTimestampRef
+                                         @=? fromText srtTimestamp
                 , testCase "toText"    $ srtTimestamp ≟ toText srtTimestampRef
                 , testCase "toText"    $ srtTimestamp ≟ toText srtTimestampRef
                 , testCase "parsec"    $
                         Right (SRTTimeStamp 4834_567_000_000)
-                      ≟ parsec @SRTTimeStamp @ParseError @(Either ParseError)
+                    @=? parsec @SRTTimeStamp @ParseError @(Either ParseError)
                                @Text @String "srtTimestamp" srtTimestamp
                 , testProperty "invertibleText"
                                (propInvertibleText @SRTTimeStamp)

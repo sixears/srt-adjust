@@ -39,7 +39,6 @@ import Data.Textual  ( Printable( print ), Textual( textual ), fromText,toText )
 import Data.MoreUnicode.Applicative  ( (⊵), (⋪), (⋫) )
 import Data.MoreUnicode.Functor      ( (⊳) )
 import Data.MoreUnicode.Natural      ( ℕ )
-import Data.MoreUnicode.Tasty        ( (≟) )
 
 -- parsec-plus -------------------------
 
@@ -65,11 +64,11 @@ import Test.Tasty  ( TestTree, testGroup )
 
 -- tasty-hunit -------------------------
 
-import Test.Tasty.HUnit  ( testCase )
+import Test.Tasty.HUnit  ( (@=?), testCase )
 
 -- tasty-plus --------------------------
 
-import TastyPlus  ( propInvertibleText, runTestsP, runTestsReplay, runTestTree )
+import TastyPlus  ( (≟), propInvertibleText, runTestsP, runTestsReplay, runTestTree )
 
 -- tasty-quickcheck --------------------
 
@@ -149,11 +148,11 @@ tests ∷ TestTree
 tests =
   testGroup "SRTSubtitleText"
             [ testCase "fromText" $
-                    Just srtSubtitleTextRef ≟ fromText srtSubtitleText
+                    Just srtSubtitleTextRef @=? fromText srtSubtitleText
             , testCase "toText"   $ srtSubtitleText ≟ toText srtSubtitleTextRef
             , testCase "parsec"   $
                     Right srtSubtitleTextRef
-                  ≟ parsec @SRTSubtitleText @ParseError @(Either ParseError)
+                @=? parsec @SRTSubtitleText @ParseError @(Either ParseError)
                            @Text @String "srtTimestamp" srtSubtitleText
             , testProperty "invertibleText"
                            (propInvertibleText @SRTSubtitleText)

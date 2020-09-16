@@ -10,7 +10,7 @@ name:                srt-adjust
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             1.0.0.1
+version:             1.0.0.2
 
 -- A short (one-line) description of the package.
 synopsis:            adjust SRT subtitle file timing
@@ -91,7 +91,7 @@ library
                      , optparse-plus        >= 1.0.1.0
                      , parsec-plus          >= 1.0.2.0
                      , parser-plus          >= 1.0.1.0
-                     , tasty-plus           >= 1.1.0.0
+                     , tasty-plus           >= 1.4.0.0
                      , tfmt                 >= 0.2.2.0
 
   -- Directories containing source files.

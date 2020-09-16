@@ -46,7 +46,6 @@ import MonadError.IO.Error  ( AsIOError, IOError, userE )
 
 import Data.MoreUnicode.Lens     ( (⊣), (⫥) )
 import Data.MoreUnicode.Natural  ( ℕ )
-import Data.MoreUnicode.Tasty    ( (≟) )
 
 -- mtl ---------------------------------
 
@@ -58,11 +57,11 @@ import Test.Tasty  ( TestTree, testGroup )
 
 -- tasty-hunit -------------------------
 
-import Test.Tasty.HUnit  ( testCase )
+import Test.Tasty.HUnit  ( (@=?), testCase )
 
 -- tasty-plus --------------------------
 
-import TastyPlus  ( runTestsP, runTestsReplay, runTestTree )
+import TastyPlus  ( (≟), runTestsP, runTestsReplay, runTestTree )
 
 -- text --------------------------------
 
@@ -147,10 +146,10 @@ optionsAdjustTests =
    in testGroup "optionsAdjust"
                 [ testCase "just offset (1)" $
                       Right (MS_S 0, MS 1000)
-                    ≟ calcShift @IOError 10_000 20_000 11_000 21_000
+                    @=? calcShift @IOError 10_000 20_000 11_000 21_000
                 , testCase "just offset (2)" $
                       Right (MS_S 0, MS 2000)
-                    ≟ calcShift @IOError 10_000 20_000 12_000 22_000
+                    @=? calcShift @IOError 10_000 20_000 12_000 22_000
                 , testCase "offset shift (1)" $
                       let Right (skew,off) = calcShift @IOError 10_000 20_000
                                                                 12_000 22_000
@@ -158,10 +157,10 @@ optionsAdjustTests =
                              22_000 ≟ shift off skew (20_000 ∷ SRTTimeStamp)
                 , testCase "just skew (1)" $
                       Right (MS_S 100, MS 0)
-                    ≟ calcShift @IOError 10_000 20_000 11_000 22_000
+                    @=? calcShift @IOError 10_000 20_000 11_000 22_000
                 , testCase "just skew (2)" $
                       Right (MS_S 200, MS 0)
-                    ≟ calcShift @IOError 10_000 20_000 12_000 24_000
+                    @=? calcShift @IOError 10_000 20_000 12_000 24_000
                 , testCase "real world" $
                     let t1 = 37_436
                         t2 = 45_778

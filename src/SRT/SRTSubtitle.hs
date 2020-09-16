@@ -47,7 +47,6 @@ import Data.MoreUnicode.Applicative  ( (⊵), (⋪) )
 import Data.MoreUnicode.Functor      ( (⊳) )
 import Data.MoreUnicode.Lens         ( (⊧) )
 import Data.MoreUnicode.Natural      ( ℕ )
-import Data.MoreUnicode.Tasty        ( (≟) )
 
 -- parsec-plus -------------------------
 
@@ -68,11 +67,12 @@ import Test.Tasty  ( TestTree, testGroup )
 
 -- tasty-hunit -------------------------
 
-import Test.Tasty.HUnit  ( testCase )
+import Test.Tasty.HUnit  ( (@=?), testCase )
 
 -- tasty-plus --------------------------
 
-import TastyPlus  ( propInvertibleText, runTestsP, runTestsReplay, runTestTree )
+import TastyPlus  ( (≟)
+                  , propInvertibleText, runTestsP, runTestsReplay, runTestTree )
 
 -- tasty-quickcheck --------------------
 
@@ -166,12 +166,12 @@ srtSubtitleRef =
 tests ∷ TestTree
 tests =
   testGroup "SRTSubtitle"
-            [ testCase "fromText" $ Just srtSubtitleRef ≟ fromText srtSubtitle
+            [ testCase "fromText" $ Just srtSubtitleRef @=? fromText srtSubtitle
             , testCase "toText"   $
                   filter (≢'\r') srtSubtitle ≟ toText srtSubtitleRef
             , testCase "parsec"   $
                     Right srtSubtitleRef
-                  ≟ parsec @SRTSubtitle @ParseError @(Either ParseError)
+                @=? parsec @SRTSubtitle @ParseError @(Either ParseError)
                            @Text @String "srtTimestamp" srtSubtitle
             , testProperty "invertibleText" (propInvertibleText @SRTSubtitle)
             , testCase "shift" $

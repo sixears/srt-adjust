@@ -50,7 +50,6 @@ import Data.MonoTraversable  ( Element, MonoFunctor( omap ) )
 import Data.MoreUnicode.Applicative  ( (⋫))
 import Data.MoreUnicode.Functor      ( (⊳) )
 import Data.MoreUnicode.Natural      ( ℕ )
-import Data.MoreUnicode.Tasty        ( (≟) )
 
 -- parsec-plus -------------------------
 
@@ -76,12 +75,12 @@ import Test.Tasty  ( TestTree, testGroup )
 
 -- tasty-hunit -------------------------
 
-import Test.Tasty.HUnit  ( testCase )
+import Test.Tasty.HUnit  ( (@=?), testCase )
 
 -- tasty-plus --------------------------
 
-import TastyPlus  ( assertListEq, assertListEqR, propInvertibleText, runTestsP
-                  , runTestsReplay, runTestTree )
+import TastyPlus  ( (≟), assertListEq, assertListEqR, propInvertibleText
+                  , runTestsP, runTestsReplay, runTestTree )
 
 -- tasty-quickcheck --------------------
 
@@ -263,32 +262,31 @@ tests =
    in testGroup "SRTSequence" $
                   [ testCase "fromText (T)" $
                           Just (filtCR `tmap` srtSequenceSRef)
-                        ≟ fromText srtSequenceT
+                        @=? fromText srtSequenceT
                   , testCase "toText (T)"   $
                         filtCR srtSequenceT ≟  toText srtSequenceSRef
                   , testCase "fromText (S)" $
                           Just (filtCR `tmap` srtSequenceSRef)
-                        ≟ fromText srtSequenceS
+                        @=? fromText srtSequenceS
                   , testCase "toText (S)"   $
                         filtBOM (filtCR srtSequenceS) ≟ toText srtSequenceSRef
                   ]
-                ⊕ assertListEqR "fromText"
+                  ⊕ assertListEqR "fromText"
                               (unSRTSequence ⊳ (parsedE(parseText srtSequence)))
                               (unSRTSequence srtSequenceRef)
-                ⊕ [ testCase "toText"   $
+                  ⊕ [ testCase "toText"   $
                         filtBOM (filtCR srtSequence) ≟ toText srtSequenceRef
                   , testCase "parsec"   $
                           Right srtSequenceRef
-                        ≟ parsec @SRTSequence @ParseError @(Either ParseError)
+                      @=? parsec @SRTSequence @ParseError @(Either ParseError)
                                  @Text @String "srtTimestamp" srtSequence
                   , testProperty "invertibleText"
                                  (propInvertibleText @SRTSequence)
-                  ]
-                ⊕ assertListEq "shift" (unSRTSequence srtSequenceRefShifted)
-                    (unSRTSequence (shift (MS 1000) (MS_S 10) srtSequenceRef))
-                ⊕ [ testCase "find" $
+                  , assertListEq "shift" (unSRTSequence srtSequenceRefShifted)
+                      (unSRTSequence (shift (MS 1000) (MS_S 10) srtSequenceRef))
+                  , testCase "find" $
                         [SRTTiming 37_436 41_612]
-                      ≟ find (isInfixOf "hundreds") srtSequenceRef
+                      @=? find (isInfixOf "hundreds") srtSequenceRef
                   ]
 
 ----------------------------------------
