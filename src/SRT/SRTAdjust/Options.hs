@@ -29,6 +29,7 @@ import Prelude.Unicode      ( ℚ )
 
 -- data-textual ------------------------
 
+import Data.Textual             ( toString )
 import Data.Textual.Fractional  ( Optional( Optional ), decExpSign, fractional'
                                 , optSign )
 import Data.Textual.Integral    ( Decimal( Decimal ) )
@@ -70,7 +71,8 @@ import Control.Monad.Except  ( MonadError )
 
 import Options.Applicative  ( ArgumentFields, Mod, Parser, ReadM
                             , action, eitherReader, long, metavar, option
-                            , optional, pure, short, strArgument, value
+                            , optional, progDesc, pure, short, strArgument
+                            , value
                             )
 
 -- optparse-plus -----------------------
@@ -174,6 +176,6 @@ instance Resolvable Options' where
 
 optsParse ∷ (MonadIO μ, AsFPathError ε, AsIOError ε, MonadError ε μ) ⇒
             Maybe Text → Text → μ Options
-optsParse progn descn = parseOpts progn descn parseOptions' ≫ resolve
+optsParse progn descn = parseOpts progn (progDesc $ toString descn) parseOptions' ≫ resolve
 
 -- that's all, folks! ----------------------------------------------------------
