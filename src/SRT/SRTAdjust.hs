@@ -33,8 +33,7 @@ import Duration  ( Duration( MS ), asMilliseconds )
 
 -- fpath -------------------------------
 
-import FPath.AsFilePath  ( filepath )
-import FPath.File        ( File )
+import FPath.File  ( File )
 
 -- monaderror-io -----------------------
 
@@ -44,7 +43,7 @@ import MonadError.IO.Error  ( AsIOError, IOError, userE )
 
 -- more-unicode ------------------------
 
-import Data.MoreUnicode.Lens     ( (⊣), (⫥) )
+import Data.MoreUnicode.Lens     ( (⊣) )
 import Data.MoreUnicode.Natural  ( ℕ )
 
 -- mtl ---------------------------------
@@ -88,15 +87,15 @@ import SRT.SRTTiming          ( SRTTiming( SRTTiming ) )
 --------------------------------------------------------------------------------
 
 findMarker ∷ (AsIOError ε, MonadError ε η) ⇒
-             Marker → SRTSequence → Maybe File → η SRTTiming
+             Marker → SRTSequence → File → η SRTTiming
 findMarker m seq fn =
   let mt = m ⊣ mtext
-      inf = case fn of Just f  → [fmt| in '%s'|] (f ⫥ filepath); Nothing → ""
-  in case find (isInfixOf (m ⊣ mtext)) seq of
-       []  → throwError ∘ userE $ [fmt|text '%t' not found%s|] mt inf
-       [x] → return x
-       xs  → throwError ∘ userE $ [fmt|text '%t' found multiple times%s (%L)|]
-                                  mt inf xs
+   in case find (isInfixOf (m ⊣ mtext)) seq of
+        []  → throwError ∘ userE $ [fmt|text '%t' not found in '%T'|] mt fn
+        [x] → return x
+        xs  → let msg = [fmt|text '%t' found multiple times in '%T' (%L)|]
+                        mt fn xs
+               in throwError $ userE msg
 
 ----------------------------------------
 
@@ -114,7 +113,7 @@ calcShift t1 t2 m1p m2p = do
 ----------------------------------------
 
 optionsAdjust ∷ (AsIOError ε, MonadError ε η) ⇒
-                SRTSequence → Maybe File → AdjustmentOpts
+                SRTSequence → File → AdjustmentOpts
               → η (Skew, Duration)
 optionsAdjust _ _ (AdjDelOff  d  o)  = return (d,o)
 optionsAdjust seq fn (AdjMarkers m1 (Just m2)) = do

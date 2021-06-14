@@ -109,6 +109,14 @@ import SRT.TFunctor         ( TFunctor( tmap ) )
 
 --------------------------------------------------------------------------------
 
+{-
+
+!!! CAN WE USE TEXTENCODING UTF8_BOM here?
+!!! https://hackage.haskell.org/package/base-4.14.1.0/docs/System-IO.html#g:24
+!!! SEE ALSO MONADIO-PLUS
+
+-}
+
 data SRTSequence = SRTSequence { unSRTSequence ∷ [SRTSubtitle] }
   deriving (Eq, Show)
 

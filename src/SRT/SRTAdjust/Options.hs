@@ -42,7 +42,6 @@ import Duration  ( Duration )
 
 import FPath.AbsFile           ( AbsFile )
 import FPath.Error.FPathError  ( AsFPathError )
-import FPath.IO                ( pResolve )
 
 -- lens --------------------------------
 
@@ -54,7 +53,8 @@ import MonadError.IO.Error  ( AsIOError )
 
 -- monadio-plus ------------------------
 
-import MonadIO  ( MonadIO )
+import MonadIO        ( MonadIO )
+import MonadIO.FPath  ( pResolve )
 
 -- more-unicode ------------------------
 
