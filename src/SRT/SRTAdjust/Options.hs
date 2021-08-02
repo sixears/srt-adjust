@@ -19,7 +19,6 @@ import Control.Monad        ( return, sequence )
 import Data.Bifunctor       ( bimap )
 import Data.Char            ( Char )
 import Data.Function        ( ($) )
-import Data.Maybe           ( Maybe )
 import Text.Show            ( Show( show ) )
 
 -- base-unicode-symbols ----------------
@@ -175,7 +174,7 @@ instance Resolvable Options' where
                                 return $ Options is a
 
 optsParse ∷ (MonadIO μ, AsFPathError ε, AsIOError ε, MonadError ε μ) ⇒
-            Maybe Text → Text → μ Options
-optsParse progn descn = parseOpts progn (progDesc $ toString descn) parseOptions' ≫ resolve
+            Text → μ Options
+optsParse descn = parseOpts (progDesc $ toString descn) parseOptions' ≫ resolve
 
 -- that's all, folks! ----------------------------------------------------------

@@ -15,7 +15,6 @@ import Prelude  ( Int, floor )
 
 import Control.Monad  ( forM_, return )
 import Data.Function  ( ($) )
-import Data.Maybe     ( Maybe( Nothing ) )
 import System.Exit    ( ExitCode( ExitSuccess ) )
 import System.IO      ( IO )
 
@@ -63,7 +62,7 @@ import SRT.Skew               ( to_ms_s )
 
 main ∷ IO ()
 main = doMain @FPathIOParseError $ do
-  opts ← optsParse Nothing "greet thee all"
+  opts ← optsParse "greet thee all"
 
   let fns = case opts ⊣ infns of
               [] → [FileA [absfile|/dev/stdin|]] -- read stdin

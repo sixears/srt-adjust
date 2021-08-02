@@ -10,7 +10,7 @@ name:                srt-adjust
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             1.0.0.5
+version:             1.0.0.6
 
 -- A short (one-line) description of the package.
 synopsis:            adjust SRT subtitle file timing
@@ -81,16 +81,16 @@ library
                      , boundedn             >= 1.1.7.0
                      , duration             >= 1.0.0.0
                      , exited               >= 1.0.4.0
-                     , fpath                >= 1.1.4.2
-                     , monaderror-io        >= 1.1.0.1
-                     , monadio-plus         >= 1.4.9.0
+                     , fpath                >= 1.1.5.0
+                     , monaderror-io        >= 1.1.2.0
+                     , monadio-plus         >= 1.4.13.0
                      , more-unicode         >= 0.0.15.0
-                     , non-empty-containers >= 1.4.1.0
+                     , non-empty-containers >= 1.4.2.0
                      , number               >= 1.1.2.0
-                     , optparse-plus        >= 1.0.2.0
+                     , optparse-plus        >= 1.1.0.0
                      , parsec-plus          >= 1.1.0.1
                      , parser-plus          >= 1.0.3.1
-                     , tasty-plus           >= 1.5.0.1
+                     , tasty-plus           >= 1.5.1.0
                      , tfmt                 >= 0.2.4.0
 
   -- Directories containing source files.
